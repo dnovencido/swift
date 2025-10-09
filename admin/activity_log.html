@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWIFT 2.0 - Activity Log</title>
+    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="../css/style.css?v=1759867000" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        .filter-section {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        .filter-group select, .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .filter-group input[type="date"] {
+            min-width: 150px;
+        }
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .activity-table th {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .activity-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        .activity-table tr:hover {
+            background: #f8f9fa;
+        }
+        .activity-action {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .action-login { background: #d4edda; color: #155724; }
+        .action-logout { background: #f8d7da; color: #721c24; }
+        .action-create { background: #d1ecf1; color: #0c5460; }
+        .action-update { background: #fff3cd; color: #856404; }
+        .action-delete { background: #f8d7da; color: #721c24; }
+        .action-system { background: #cce5ff; color: #004085; }
+        .activity-description {
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        .activity-time {
+            color: #666;
+            font-size: 13px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: #f8f9fa;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination .current-page {
+            background: #0A4174;
+            color: white;
+            border-color: #0A4174;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
+            </div>
+            <div class="nav-menu">
+                <a href="dashboard.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+                <a href="index.html" class="nav-item"><i class="fas fa-users-cog"></i><span>User & Farm Management</span></a>
+                <a href="activity_log.html" class="nav-item active"><i class="fas fa-history"></i><span>Activity Log</span></a>
+            </div>
+        </div>
+        <div class="nav-menu"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+    </div>
+    
+    <div class="main-content">
+        <div class="header">
+            <div class="welcome-section">
+                <p class="greeting" id="greeting">&nbsp;</p>
+                <h1 class="welcome-title">ACTIVITY LOG</h1>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Action Type</label>
+                    <select id="actionFilter">
+                        <option value="">All Actions</option>
+                        <option value="login">Login</option>
+                        <option value="logout">Logout</option>
+                        <option value="admin_action">Admin Actions</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="filter-group">
+                    <label>To Date</label>
+                    <input type="date" id="toDate">
+                </div>
+                <div class="filter-group">
+                    <label>Search</label>
+                    <input type="text" id="searchInput" placeholder="Search activities...">
+                </div>
+                <div class="filter-group">
+                    <button id="applyFilters" class="control-btn" style="background:#0A4174; margin-top:20px;">Apply Filters</button>
+                </div>
+                <div class="filter-group">
+                    <button id="clearFilters" class="control-btn" style="background:#6c757d; margin-top:20px;">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-card">
+            <div class="section-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <h2 class="section-title" style="margin:0;">Activity Log</h2>
+            </div>
+            
+            <div class="table-container">
+                <table class="activity-table" id="activityTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>Description</th>
+                            <th>User</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityBody">
+                        <tr><td colspan="5" class="loading">Loading activities...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="pagination" id="pagination" style="display:none;">
+                <button id="prevPage" disabled>Previous</button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button id="nextPage" disabled>Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentPage = 1;
+            let totalPages = 1;
+            let currentFilters = {};
+
+            // Load activities on page load
+            loadActivities();
+
+            // Filter event listeners
+            document.getElementById('applyFilters').addEventListener('click', function() {
+                currentPage = 1;
+                loadActivities();
+            });
+
+            document.getElementById('clearFilters').addEventListener('click', function() {
+                document.getElementById('actionFilter').value = '';
+                document.getElementById('fromDate').value = '';
+                document.getElementById('toDate').value = '';
+                document.getElementById('searchInput').value = '';
+                currentPage = 1;
+                loadActivities();
+            });
+
+            // Pagination event listeners
+            document.getElementById('prevPage').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadActivities();
+                }
+            });
+
+            document.getElementById('nextPage').addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadActivities();
+                }
+            });
+
+            // Search on Enter key
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    currentPage = 1;
+                    loadActivities();
+                }
+            });
+
+            function loadActivities() {
+                // Get current filters
+                currentFilters = {
+                    action: document.getElementById('actionFilter').value,
+                    from_date: document.getElementById('fromDate').value,
+                    to_date: document.getElementById('toDate').value,
+                    search: document.getElementById('searchInput').value,
+                    page: currentPage
+                };
+
+                // Show loading
+                document.getElementById('activityBody').innerHTML = '<tr><td colspan="5" class="loading">Loading activities...</td></tr>';
+                document.getElementById('pagination').style.display = 'none';
+
+                // Build query string
+                const queryParams = new URLSearchParams();
+                Object.keys(currentFilters).forEach(key => {
+                    if (currentFilters[key]) {
+                        queryParams.append(key, currentFilters[key]);
+                    }
+                });
+
+                fetch(`../php/get_activity_log.php?${queryParams.toString()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displayActivities(data.activities);
+                            updatePagination(data.pagination);
+                        } else {
+                            document.getElementById('activityBody').innerHTML = '<tr><td colspan="5" class="no-data">Error loading activities: ' + (data.message || 'Unknown error') + '</td></tr>';
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('activityBody').innerHTML = '<tr><td colspan="5" class="no-data">Error loading activities: Network error</td></tr>';
+                    });
+            }
+
+            function displayActivities(activities) {
+                const tbody = document.getElementById('activityBody');
+                
+                if (activities.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">No activities found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = activities.map(activity => {
+                    const actionClass = getActionClass(activity.action);
+                    const time = new Date(activity.created_at).toLocaleString();
+                    
+                    return `
+                        <tr>
+                            <td class="activity-time">${time}</td>
+                            <td><span class="activity-action ${actionClass}">${activity.action}</span></td>
+                            <td class="activity-description">${activity.description || '-'}</td>
+                            <td>${activity.username || 'System'}</td>
+                            <td>${activity.ip_address || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            function getActionClass(action) {
+                const actionMap = {
+                    'login': 'action-login',
+                    'logout': 'action-logout',
+                    'admin_action': 'action-create',
+                    'system': 'action-system'
+                };
+                return actionMap[action.toLowerCase()] || 'action-system';
+            }
+
+            function updatePagination(pagination) {
+                currentPage = pagination.current_page;
+                totalPages = pagination.total_pages;
+                
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const pageInfo = document.getElementById('pageInfo');
+                
+                prevBtn.disabled = currentPage <= 1;
+                nextBtn.disabled = currentPage >= totalPages;
+                pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                
+                if (totalPages > 1) {
+                    document.getElementById('pagination').style.display = 'flex';
+                } else {
+                    document.getElementById('pagination').style.display = 'none';
+                }
+            }
+
+
+            // Logout functionality
+            document.getElementById('logoutBtn').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear localStorage completely
+                    try { 
+                        localStorage.clear(); 
+                        sessionStorage.clear();
+                    } catch(e) {}
+                    
+                    // Logout from server
+                    fetch('../php/admin_auth.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'logout' })
+                    }).finally(() => {
+                        // Force redirect to login page - use replace to prevent back button issues
+                        window.location.replace('login.html');
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SWIFT 2.0 - Daily Report</title>
+    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="../css/style.css?v=1759866206" />
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+                <a href="dailyreport.html" class="nav-item active"><i class="fa-solid fa-clipboard"></i><span>Daily Report</span></a>
+                <a href="weeklyreport.html" class="nav-item"><i class="fa-solid fa-calendar-week"></i><span>Weekly Report</span></a>
+            </div>
+        </div>
+        <div class="nav-menu">
+            <a href="#" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <div class="welcome-section">
+                <p class="greeting" id="greeting">&nbsp;</p>
+                <h1 class="welcome-title">DAILY REPORTS</h1>
+            </div>
+            <div class="header-controls" style="display: flex; align-items: center; gap: 16px;">
+                <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                    <label for="reportDate" id="dateLabel" style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Date:</label>
+                    <input type="date" id="reportDate" value="" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--border-radius); background: var(--white); color: var(--text-primary);">
+                </div>
+                <button id="exportReport" class="control-btn" style="background: var(--primary-color);">Export PDF</button>
+            </div>
+        </div>
+        <div class="report-container">
+            <div class="control-card">
+                <h2 class="section-title">Report</h2>
+                <div class="report-content">
+                    <div id="reportData">
+                        <p>Select a date to view the daily report.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', ()=>{
+            // Redirect unauthenticated users to login
+            try{ const u = JSON.parse(localStorage.getItem('swift_user')||'null'); if(!u){ window.location.href = '../admin/login.html'; return; } }catch(e){ window.location.href='../admin/login.html'; return; }
+        });
+    </script>
+    <script src="../js/config.js"></script>
+    <script src="../js/?v=1759866184-09-20-disabled"></script>
+    <script src="../js/?v=1759866184"></script>
+</body>
+</html>
+
+

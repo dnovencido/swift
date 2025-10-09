@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SWIFT 2.0 - Dashboard</title>
+    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="../css/style.css?v=1759866206" />
+    <script src="../js/?v=1759866184"></script>
+    <script src="../js/?v=1759866184"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
+            </div>
+            <div class="nav-menu">
+                <a href="dashboard.html" class="nav-item active"><i class="fas fa-home"></i><span>Dashboard</span></a>
+                <a href="index.html" class="nav-item"><i class="fas fa-users-cog"></i><span>User & Farm Management</span></a>
+                <a href="activity_log.html" class="nav-item"><i class="fas fa-history"></i><span>Activity Log</span></a>
+            </div>
+        </div>
+        <div class="nav-menu"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+    </div>
+    <div class="main-content">
+        <div class="header"><div class="welcome-section"><p class="greeting" id="greeting">&nbsp;</p><h1 class="welcome-title">DASHBOARD</h1></div></div>
+
+        <div class="control-card" style="margin-top:16px;">
+            <div class="transfer-cards">
+                <div class="transfer-card clickable" data-type="users"><div class="card-icon"><i class="fas fa-user"></i></div><p class="card-title">Users</p><h2 class="card-amount" id="statUsers">-</h2></div>
+                <div class="transfer-card clickable" data-type="farms"><div class="card-icon"><i class="fas fa-warehouse"></i></div><p class="card-title">Farms</p><h2 class="card-amount" id="statFarms">-</h2></div>
+                <div class="transfer-card clickable" data-type="devices"><div class="card-icon"><i class="fas fa-microchip"></i></div><p class="card-title">Devices</p><h2 class="card-amount" id="statDevices">-</h2></div>
+                <div class="transfer-card clickable" data-type="devices" data-status="up"><div class="card-icon"><i class="fas fa-circle-check"></i></div><p class="card-title">Online</p><h2 class="card-amount" id="statOnline">-</h2></div>
+                <div class="transfer-card clickable" data-type="devices" data-status="down"><div class="card-icon"><i class="fas fa-circle-xmark"></i></div><p class="card-title">Offline</p><h2 class="card-amount" id="statOffline">-</h2></div>
+            </div>
+        </div>
+
+        <div id="listPanel" class="control-card" style="margin-top:16px; display:none;">
+            <div class="section-header" style="display:flex; align-items:center; justify-content:space-between;">
+                <h2 id="listTitle" class="section-title" style="margin:0;">List</h2>
+                <div style="display:flex; gap:8px;">
+                    <button id="checkAllDevices" class="control-btn" style="background:#0A4174; display:none;">Check All Devices</button>
+                    <button id="closeList" class="control-btn" style="background:#999">Close</button>
+                </div>
+            </div>
+            <div class="table-container" style="margin-top:10px;">
+                <table class="data-table" id="listTable">
+                    <thead><tr id="listHead"></tr></thead>
+                    <tbody id="listBody"><tr><td>Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auth guard: only super_user should access admin
+            try {
+                const u = JSON.parse(localStorage.getItem('swift_user')||'null');
+                if (!u) { window.location.href = 'login.html'; return; }
+                if ((u.role||'').toLowerCase() !== 'super_user') { window.location.href = '../user/index.html'; return; }
+            } catch(e){ window.location.href='login.html'; return; }
+            const hour=new Date().getHours(); const s=hour<12?'Good Morning':(hour<17?'Good Afternoon':'Good Evening'); let n='Admin'; try{const st=localStorage.getItem('swift_user'); if(st){const p=JSON.parse(st); n=p.username||n;}}catch(e){}; document.getElementById('greeting').textContent=`${s}, ${n}!`;
+            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='login.html'; });});
+            // Load initial stats with small delay to ensure DOM is ready
+            setTimeout(() => {
+                loadStats();
+            }, 100);
+            
+        // Auto-refresh stats every 5 seconds for better performance
+        setInterval(loadStats, 5000);
+        
+        // Auto-update device status every 5 seconds for faster offline detection
+        setInterval(updateDeviceStatus, 5000);
+            
+            function loadStats() {
+                fetch('../php/admin_stats.php').then(r=>r.json()).then(d=>{ 
+                    if(!d||!d.success) return; 
+                    const s=d.stats||{}; 
+                    const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=String(v??0);} ; 
+                    set('statUsers', s.farmers); 
+                    set('statFarms', s.farms); 
+                    set('statDevices', s.devices); 
+                    set('statOnline', s.devices_up); 
+                    set('statOffline', s.devices_down); 
+                }).catch((e)=>{
+                    console.error('Failed to load stats:', e);
+                    // Set default values on error to prevent layout issues
+                    const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=String(v??0);} ; 
+                    set('statUsers', 0); 
+                    set('statFarms', 0); 
+                    set('statDevices', 0); 
+                    set('statOnline', 0); 
+                    set('statOffline', 0); 
+                });
+            }
+            
+            function updateDeviceStatus() {
+                // Update device status in background
+                fetch('../php/update_device_status.php?run=update&manual=true').then(r=>r.json()).then(d=>{
+                    if(d.success) {
+                        // Reload stats after updating device status
+                        loadStats();
+                    }
+                }).catch(()=>{});
+            }
+
+            // Card click to load lists
+            document.querySelectorAll('.transfer-card.clickable').forEach(card=>{
+                card.addEventListener('click', ()=>{
+                    const type = card.getAttribute('data-type');
+                    const status = card.getAttribute('data-status') || '';
+                    loadList(type, status);
+                });
+            });
+
+            document.getElementById('closeList').addEventListener('click', ()=>{
+                document.getElementById('listPanel').style.display='none';
+            });
+
+            // Check All Devices button
+            document.getElementById('checkAllDevices').addEventListener('click', ()=>{
+                checkAllDevices();
+            });
+
+            function loadList(type, status){
+                const titleMap = { users:'Users', farms:'Farms', devices:'Devices', up:'Online Devices', down:'Offline Devices' };
+                const listTitle = document.getElementById('listTitle');
+                listTitle.textContent = (status ? (status==='up'?'Online ':'Offline ') : '') + (titleMap[type] || 'List');
+                const head = document.getElementById('listHead');
+                const body = document.getElementById('listBody');
+                const checkAllBtn = document.getElementById('checkAllDevices');
+                head.innerHTML=''; body.innerHTML='<tr><td>Loading...</td></tr>';
+                document.getElementById('listPanel').style.display='block';
+                
+                // Show/hide Check All Devices button based on list type
+                if (type === 'devices') {
+                    checkAllBtn.style.display = 'inline-block';
+                } else {
+                    checkAllBtn.style.display = 'none';
+                }
+
+                const url = `../php/admin_lists.php?type=${encodeURIComponent(type)}${status?`&status=${encodeURIComponent(status)}`:''}`;
+                fetch(url).then(r=>r.json()).then(d=>{
+                    if(!d||!d.success){ body.innerHTML='<tr><td>No data</td></tr>'; return; }
+                    const rows = d.data||[];
+                    if (type==='users') { 
+                        head.innerHTML='<th>ID</th><th>User Info</th><th>Contact</th><th>Address</th><th>Status</th><th>Farms</th>'; 
+                        body.innerHTML = rows.map(r=>{
+                            const farms = r.farms || [];
+                            const farmDropdown = farms.length > 0 ? 
+                                `<select class="farm-select" data-user-id="${r.id}" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px;">
+                                    <option value="">Select Farm</option>
+                                    ${farms.map(f => `<option value="${f.id}">${f.farm_name}</option>`).join('')}
+                                </select>` : 
+                                '<span style="color:#999;">No Farms</span>';
+                            
+                            return `<tr>
+                                <td>${r.id}</td>
+                                <td>
+                                    <div style="font-weight:bold;">${r.username}</div>
+                                    <div style="font-size:12px; color:#666;">${r.first_name || ''} ${r.middle_name || ''} ${r.last_name || ''}</div>
+                                    <div style="font-size:11px; color:#999;">Role: ${r.role}</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:12px;">📧 ${r.email || 'No email'}</div>
+                                    <div style="font-size:12px;">📱 ${r.mobile || 'No mobile'}</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:11px;">${r.addr_street || 'No street'}</div>
+                                    <div style="font-size:11px;">${r.addr_barangay || 'No barangay'}</div>
+                                    <div style="font-size:11px;">${r.addr_city || 'No city'}, ${r.addr_province || 'No province'}</div>
+                                    <div style="font-size:11px;">${r.addr_postal || 'No postal'}</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:11px;">${r.is_active ? '✅ Active' : '❌ Inactive'}</div>
+                                    <div style="font-size:11px; color:#666;">Created: ${r.created_at || 'Unknown'}</div>
+                                </td>
+                                <td>${farmDropdown}</td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="6">No users</td></tr>'; 
+                        
+                        // Add event listeners to farm dropdowns
+                        document.querySelectorAll('.farm-select').forEach(select => {
+                            select.addEventListener('change', (e) => {
+                                const userId = e.target.getAttribute('data-user-id');
+                                const farmId = e.target.value;
+                                updateUserFarm(userId, farmId);
+                            });
+                        });
+                    }
+                    else if (type==='farms') { 
+                        head.innerHTML='<th>ID</th><th>Farm Info</th><th>Address</th><th>Status</th><th>Owner</th>'; 
+                        body.innerHTML = rows.map(r=>{
+                            return `<tr>
+                                <td>${r.id}</td>
+                                <td>
+                                    <div style="font-weight:bold;">${r.farm_name}</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:11px;">${r.street || 'No street'}</div>
+                                    <div style="font-size:11px;">${r.barangay || 'No barangay'}</div>
+                                    <div style="font-size:11px;">${r.city || 'No city'}, ${r.province || 'No province'}</div>
+                                    <div style="font-size:11px;">${r.postal || 'No postal'}</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:11px;">${r.is_active ? '✅ Active' : '❌ Inactive'}</div>
+                                    <div style="font-size:11px; color:#666;">Created: ${r.created_at || 'Unknown'}</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:12px; font-weight:bold;">${r.first_name || ''} ${r.last_name || ''}</div>
+                                    <div style="font-size:11px; color:#999;">📧 ${r.email || 'No email'}</div>
+                                    <div style="font-size:11px; color:#999;">📱 ${r.mobile || 'No mobile'}</div>
+                                </td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="5">No farms</td></tr>'; 
+                    }
+                    else { 
+head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Humidity</th><th>Ammonia</th><th>Thermal</th><th>SD Card</th><th>RTC</th><th>Last Seen</th><th>Action</th>'; 
+                        body.innerHTML = rows.map(r=>{
+                            const getComponentStatus = (status) => {
+                                if (status === 'active') return '<span style="color: #22c55e; font-weight: 600;">● Active</span>';
+                                if (status === 'error') return '<span style="color: #f59e0b; font-weight: 600;">● Error</span>';
+                                return '<span style="color: #ef4444; font-weight: 600;">● Offline</span>';
+                            };
+                            return `<tr>
+                                <td>${r.id}</td>
+                                <td>${r.device_name}</td>
+                                <td>${r.ip_address||''}</td>
+                                <td><span style="color: ${r.status==='up'?'#22c55e':'#ef4444'}; font-weight: 600;">${r.status}</span></td>
+                                <td>${getComponentStatus(r.temp_humidity_sensor)}</td>
+                                <td>${getComponentStatus(r.ammonia_sensor)}</td>
+                                <td>${getComponentStatus(r.thermal_camera)}</td>
+                                <td>${getComponentStatus(r.sd_card_module)}</td>
+                                <td>${getComponentStatus(r.rtc_module)}</td>
+                                <td>${r.last_seen||'Never'}</td>
+                                <td><button class="check-device-btn" data-device-id="${r.id}" data-device-ip="${r.ip_address||''}" style="background:#0A4174; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Check</button></td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="11">No devices</td></tr>';
+                        
+                        // Add event listeners to individual check buttons
+                        document.querySelectorAll('.check-device-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                const deviceId = e.target.getAttribute('data-device-id');
+                                const deviceIp = e.target.getAttribute('data-device-ip');
+                                checkSingleDevice(deviceId, deviceIp, e.target);
+                            });
+                        });
+                    }
+                }).catch(()=>{ body.innerHTML='<tr><td>Error loading data</td></tr>'; });
+            }
+
+            // Function to check all devices
+            function checkAllDevices() {
+                const checkAllBtn = document.getElementById('checkAllDevices');
+                const originalText = checkAllBtn.textContent;
+                checkAllBtn.textContent = 'Checking...';
+                checkAllBtn.disabled = true;
+                
+                fetch('../php/update_device_status.php?run=update&manual=true')
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            // Reload the device list to show updated status
+                            loadList('devices', '');
+                            // Reload stats
+                            loadStats();
+                        } else {
+                            alert('Error checking devices: ' + (d.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(() => {
+                        alert('Error checking devices: Network error');
+                    })
+                    .finally(() => {
+                        checkAllBtn.textContent = originalText;
+                        checkAllBtn.disabled = false;
+                    });
+            }
+            
+            // Function to get farm options for dropdown
+            function getFarmOptions(selectedFarmId) {
+                if (!window.farmOptions) {
+                    loadFarmOptions();
+                    return '<option value="">Loading...</option>';
+                }
+                return window.farmOptions;
+            }
+            
+            // Function to load farm options
+            function loadFarmOptions() {
+                fetch('../php/admin_lists.php?type=farms')
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success && d.data) {
+                            window.farmOptions = d.data.map(farm => 
+                                `<option value="${farm.id}">${farm.farm_name}</option>`
+                            ).join('');
+                        }
+                    })
+                    .catch(() => {
+                        window.farmOptions = '<option value="">Error loading farms</option>';
+                    });
+            }
+            
+            // Function to update user's farm assignment
+            function updateUserFarm(userId, farmId) {
+                fetch('../php/admin_users.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'update_farm',
+                        user_id: userId,
+                        farm_id: farmId || null
+                    })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        console.log('Farm assignment updated successfully');
+                        // Optionally reload the list to show updated data
+                        loadList('users', '');
+                    } else {
+                        alert('Error updating farm assignment: ' + (d.message || 'Unknown error'));
+                    }
+                })
+                .catch(() => {
+                    alert('Error updating farm assignment: Network error');
+                });
+            }
+            
+            // Function to check a single device
+            function checkSingleDevice(deviceId, deviceIp, button) {
+                const originalText = button.textContent;
+                button.textContent = 'Checking...';
+                button.disabled = true;
+                
+                // Create a specific URL for checking a single device
+                const url = `../php/update_device_status.php?run=update&device_id=${deviceId}`;
+                
+                fetch(url)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            // Reload the device list to show updated status
+                            loadList('devices', '');
+                            // Reload stats
+                            loadStats();
+                        } else {
+                            alert('Error checking device: ' + (d.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(() => {
+                        alert('Error checking device: Network error');
+                    })
+                    .finally(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
+
+

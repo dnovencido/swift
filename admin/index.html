@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SWIFT 2.0 - User & Farm Management</title>
+    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="../css/style.css?v=1759866206" />
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
+            </div>
+            <div class="nav-menu">
+                <a href="dashboard.html" class="nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+                <a href="index.html" class="nav-item active"><i class="fas fa-users-cog"></i><span>User & Farm Management</span></a>
+                <a href="activity_log.html" class="nav-item"><i class="fas fa-history"></i><span>Activity Log</span></a>
+            </div>
+        </div>
+        <div class="nav-menu">
+            <a href="login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="header" style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+            <div class="welcome-section"><p class="greeting" id="greeting">&nbsp;</p><h1 class="welcome-title">User & Farm Management</h1></div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input id="globalSearch" type="text" placeholder="Search user by username..." style="padding:10px; border:1px solid var(--gray-medium); border-radius:8px; width:280px;" />
+                <button id="searchBtn" class="control-btn">Search</button>
+            </div>
+        </div>
+
+        
+
+        <div class="control-card" style="margin-top:16px;">
+            <h2 class="section-title">Personal Information</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+                <div><label>First Name</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="firstName"></div>
+                <div><label>Last Name</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="lastName"></div>
+                <div><label>Middle Name</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="middleName"></div>
+                <div><label>Mobile Number</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="mobile"></div>
+                <div><label>Email Address</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="email" id="email"></div>
+                <div><label>Username</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="username"></div>
+                <div><label>Password</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="password" id="password"></div>
+            </div>
+            <h3 style="margin-top:16px;">Address</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+                <div><label>Street Address/Purok/Sitio</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="addrStreet"></div>
+                <div><label>Barangay (Village)</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="addrBarangay"></div>
+                <div><label>Municipality/City</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="addrCity"></div>
+                <div><label>Province</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="addrProvince"></div>
+                <div><label>Postal Code (optional)</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="addrPostal"></div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="control-btn" id="userAddBtn" style="min-width:140px;">Add</button>
+                
+                <button class="control-btn" id="userClearBtn" style="background:var(--gray-200); min-width:140px;">Clear</button>
+                <button class="control-btn" id="userUpdateBtn" style="background:var(--gray-300); min-width:140px;">Update</button>
+                <button class="control-btn" id="userDeleteBtn" style="background:var(--danger); min-width:140px;">Delete</button>
+            </div>
+        </div>
+
+        <div class="control-card" style="margin-top:16px;">
+            <h2 class="section-title">Farm Information</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+                <div><label>Farm Name</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="farmName"></div>
+            </div>
+            <h3 style="margin-top:16px;">Farm Address</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+                <div><label>Street Address/Purok/Sitio</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="farmStreet"></div>
+                <div><label>Barangay (Village)</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="farmBarangay"></div>
+                <div><label>Municipality/City</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="farmCity"></div>
+                <div><label>Province</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="farmProvince"></div>
+                <div><label>Postal Code (optional)</label><input style="width:100%;padding:10px;border:1px solid var(--gray-medium);border-radius:8px;" type="text" id="farmPostal"></div>
+            </div>
+            <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <label for="farmSelect" style="font-weight:600;">Select Farm:</label>
+                <select id="farmSelect" style="padding:10px; border:1px solid var(--gray-medium); border-radius:8px; min-width:220px;">
+                    <option value="">-- No farms --</option>
+                </select>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="control-btn" id="btnAddFarm" style="min-width:140px;">Add</button>
+                <button class="control-btn" id="clearBtn" style="background:var(--gray-200); min-width:140px;">Clear</button>
+                <button class="control-btn" id="btnUpdateFarm" style="background:var(--gray-300); min-width:140px;">Update</button>
+                <button class="control-btn" id="btnDelFarm" style="background:var(--danger); min-width:140px;">Delete</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auth guard: only super_user should access admin
+            try {
+                const u = JSON.parse(localStorage.getItem('swift_user')||'null');
+                if (!u) { window.location.href = 'login.html'; return; }
+                if ((u.role||'').toLowerCase() !== 'super_user') { window.location.href = '../user/index.html'; return; }
+            } catch(e){ window.location.href='login.html'; return; }
+            const hour=new Date().getHours(); const s=hour<12?'Good Morning':(hour<17?'Good Afternoon':'Good Evening'); let n='Admin'; try{const st=localStorage.getItem('swift_user'); if(st){const p=JSON.parse(st); n=p.username||n;}}catch(e){}; document.getElementById('greeting').textContent=`${s}, ${n}!`;
+            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='login.html'; });});
+            // Personal section helpers
+            function clearPersonal(){ document.getElementById('firstName').value=''; document.getElementById('lastName').value=''; document.getElementById('middleName').value=''; document.getElementById('mobile').value=''; document.getElementById('email').value=''; document.getElementById('addrStreet').value=''; document.getElementById('addrBarangay').value=''; document.getElementById('addrCity').value=''; document.getElementById('addrProvince').value=''; document.getElementById('addrPostal').value=''; document.getElementById('username').value=''; document.getElementById('password').value=''; }
+            document.getElementById('userClearBtn').addEventListener('click', clearPersonal);
+            document.getElementById('userAddBtn').addEventListener('click', async ()=>{ try{ selectedUser=null; await upsertUserAndMaybeGetId(true); farmSelect.innerHTML="<option value=''>-- No farms --</option>"; selectedFarm=null; clearFarm(); alert('Added'); }catch(e){ alert(e.message||'Add failed'); } });
+            document.getElementById('userUpdateBtn').addEventListener('click', async ()=>{ try{ if(!selectedUser){ alert('Search and load a user first'); return; } await upsertUserAndMaybeGetId(false); alert('Updated'); }catch(e){ alert(e.message||'Update failed'); } });
+            document.getElementById('userDeleteBtn').addEventListener('click', async ()=>{ try{ if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; } if(!confirm('Delete this user and all related data?')) return; const res=await fetch('../php/admin_users.php',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedUser.id})}); const d=await res.json(); if(!d.success) throw new Error(d.message||'Delete failed'); clearPersonal(); farmSelect.innerHTML="<option value=''>-- No farms --</option>"; selectedUser=null; selectedFarm=null; alert('Deleted'); }catch(e){ alert(e.message||'Delete failed'); } });
+
+            // Farm section helpers
+            function clearFarm(){ document.getElementById('farmName').value=''; document.getElementById('farmStreet').value=''; document.getElementById('farmBarangay').value=''; document.getElementById('farmCity').value=''; document.getElementById('farmProvince').value=''; document.getElementById('farmPostal').value=''; selectedFarm=null; }
+            document.getElementById('clearBtn').addEventListener('click', ()=>{ clearFarm(); farmSelect.value=''; });
+            document.getElementById('btnAddFarm').addEventListener('click', async ()=>{
+                try{
+                    if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; }
+                    const farm_name=document.getElementById('farmName').value.trim();
+                    if(!farm_name){ alert('Enter farm name'); return; }
+                    // force create (ignore selectedFarm)
+                    const street=document.getElementById('farmStreet').value.trim();
+                    const barangay=document.getElementById('farmBarangay').value.trim();
+                    const city=document.getElementById('farmCity').value.trim();
+                    const province=document.getElementById('farmProvince').value.trim();
+                    const postal=document.getElementById('farmPostal').value.trim();
+                    const res = await fetch('../php/admin_farms.php',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:selectedUser.id, farm_name, street, barangay, city, province, postal }) });
+                    const d = await res.json(); if(!d.success) throw new Error(d.message||'Add failed');
+                    selectedFarm = { id: d.id, name: farm_name, street, barangay, city, province, postal };
+                    await loadFarmsByUser(selectedUser.id, d.id);
+                    alert('Added');
+                } catch(e){ alert(e.message||'Add failed'); }
+            });
+
+            async function upsertUserAndMaybeGetId(includePassword){
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                const payload = {
+                    username,
+                    role: (selectedUser&&selectedUser.role)||'user',
+                    first_name: document.getElementById('firstName').value.trim(),
+                    last_name: document.getElementById('lastName').value.trim(),
+                    middle_name: document.getElementById('middleName').value.trim(),
+                    mobile: document.getElementById('mobile').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    addr_street: document.getElementById('addrStreet').value.trim(),
+                    addr_barangay: document.getElementById('addrBarangay').value.trim(),
+                    addr_city: document.getElementById('addrCity').value.trim(),
+                    addr_province: document.getElementById('addrProvince').value.trim(),
+                    addr_postal: document.getElementById('addrPostal').value.trim()
+                };
+                if (!username) throw new Error('Username is required');
+                if (selectedUser && selectedUser.id){
+                    const body = { id: selectedUser.id, ...payload };
+                    if (includePassword && password) body.password = password;
+                    const res = await fetch('../php/admin_users.php',{ method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+                    const d = await res.json(); if(!d.success) throw new Error(d.message||'User update failed');
+                    return selectedUser.id;
+                } else {
+                    if (!password) throw new Error('Password is required to create a new user');
+                    const res = await fetch('../php/admin_users.php',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...payload, password })});
+                    const d = await res.json(); if(!d.success) throw new Error(d.message||'User create failed');
+                    const newId = d.id; selectedUser = { id:newId, username: payload.username, role: payload.role };
+                    return newId;
+                }
+            }
+
+            async function upsertFarm(userId){
+                const farm_name=document.getElementById('farmName').value.trim();
+                const street=document.getElementById('farmStreet').value.trim();
+                const barangay=document.getElementById('farmBarangay').value.trim();
+                const city=document.getElementById('farmCity').value.trim();
+                const province=document.getElementById('farmProvince').value.trim();
+                const postal=document.getElementById('farmPostal').value.trim();
+                if (!farm_name) return false; // no farm input provided
+                if (!selectedFarm) return false; // prevent accidental create from update path
+                const res = await fetch('../php/admin_farms.php',{ method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id:selectedFarm.id, user_id:userId, farm_name, street, barangay, city, province, postal }) });
+                const d = await res.json(); if(!d.success) throw new Error(d.message||'Update failed');
+                await loadFarmsByUser(userId, selectedFarm.id);
+                return true;
+            }
+
+            // no generic Save for farm to avoid confusion with Update; Add creates, Update edits
+
+            let selectedUser = null; let selectedFarm = null;
+            function searchUser(){ 
+                const q=document.getElementById('globalSearch').value.trim(); 
+                if(!q){ alert('Enter username'); return; } 
+                console.log('Searching for user:', q);
+                fetch(`../php/admin_users.php?q=${encodeURIComponent(q)}`)
+                    .then(r=>r.json())
+                    .then(d=>{ 
+                        console.log('User search result:', d);
+                        const rows=(d&&d.success&&d.data)||[]; 
+                        if(rows.length===0){ alert('User not found'); return; } 
+                        const u=rows[0]; 
+                        selectedUser = { id:u.id, username:u.username, role:u.role };
+                        console.log('Selected user:', selectedUser);
+                        
+                        // Populate personal/account fields (all fields now exist in database)
+                        document.getElementById('firstName').value = u.first_name||'';
+                        document.getElementById('lastName').value = u.last_name||'';
+                        document.getElementById('middleName').value = u.middle_name||'';
+                        document.getElementById('mobile').value = u.mobile||'';
+                        document.getElementById('email').value = u.email||'';
+                        document.getElementById('addrStreet').value = u.addr_street||'';
+                        document.getElementById('addrBarangay').value = u.addr_barangay||'';
+                        document.getElementById('addrCity').value = u.addr_city||'';
+                        document.getElementById('addrProvince').value = u.addr_province||'';
+                        document.getElementById('addrPostal').value = u.addr_postal||'';
+                        document.getElementById('username').value = u.username;
+                        document.getElementById('password').value = '';
+                        
+                        console.log('Loading farms for user ID:', u.id);
+                        // Load farms owned by this user
+                        loadFarmsByUser(u.id);
+                    })
+                    .catch(e => {
+                        console.error('Search error:', e);
+                        alert('Search error');
+                    }); 
+            }
+            document.getElementById('searchBtn').addEventListener('click', searchUser);
+            document.getElementById('globalSearch').addEventListener('keydown',(e)=>{ if(e.key==='Enter') searchUser(); });
+
+            const farmSelect = document.getElementById('farmSelect');
+            function loadFarmsByUser(userId, preferredId) {
+                console.log('loadFarmsByUser called with userId:', userId, 'preferredId:', preferredId);
+                fetch(`../php/admin_farms.php?user_id=${userId}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        console.log('Farm API response:', d);
+                        const rows = (d && d.success && d.data) || [];
+                        console.log('Farm rows:', rows);
+                        if (rows.length) {
+                            farmSelect.innerHTML = rows.map(f => 
+                                `<option value='${f.id}' data-name='${f.farm_name}' data-street='${f.street||''}' data-barangay='${f.barangay||''}' data-city='${f.city||''}' data-province='${f.province||''}' data-postal='${f.postal||''}'>${f.farm_name}</option>`
+                            ).join('');
+                            
+                            const pickId = preferredId ? String(preferredId) : String(rows[0].id);
+                            farmSelect.value = pickId;
+                            
+                            const sel = rows.find(r => String(r.id) === pickId) || rows[0];
+                            selectedFarm = { 
+                                id: sel.id, 
+                                name: sel.farm_name, 
+                                street: sel.street || '', 
+                                barangay: sel.barangay || '', 
+                                city: sel.city || '', 
+                                province: sel.province || '', 
+                                postal: sel.postal || '' 
+                            };
+                            
+                            console.log('Selected farm:', selectedFarm);
+                            
+                            // Populate farm form fields
+                            document.getElementById('farmName').value = selectedFarm.name;
+                            document.getElementById('farmStreet').value = selectedFarm.street;
+                            document.getElementById('farmBarangay').value = selectedFarm.barangay;
+                            document.getElementById('farmCity').value = selectedFarm.city;
+                            document.getElementById('farmProvince').value = selectedFarm.province;
+                            document.getElementById('farmPostal').value = selectedFarm.postal;
+                            
+                            console.log('Farm fields populated:', {
+                                farmName: document.getElementById('farmName').value,
+                                farmCity: document.getElementById('farmCity').value,
+                                farmProvince: document.getElementById('farmProvince').value
+                            });
+                        } else {
+                            console.log('No farms found for user');
+                            farmSelect.innerHTML = "<option value=''>-- No farms --</option>";
+                            selectedFarm = null;
+                            document.getElementById('farmName').value = '';
+                            document.getElementById('farmStreet').value = '';
+                            document.getElementById('farmBarangay').value = '';
+                            document.getElementById('farmCity').value = '';
+                            document.getElementById('farmProvince').value = '';
+                            document.getElementById('farmPostal').value = '';
+                        }
+                    })
+                    .catch(e => {
+                        console.error('Farm loading error:', e);
+                        farmSelect.innerHTML = "<option value=''>-- Error --</option>";
+                    });
+            }
+            farmSelect.addEventListener('change', () => {
+                const opt = farmSelect.selectedOptions[0];
+                if (!opt || !opt.value) {
+                    selectedFarm = null;
+                    return;
+                }
+                selectedFarm = { 
+                    id: parseInt(opt.value, 10), 
+                    name: opt.getAttribute('data-name'), 
+                    street: opt.getAttribute('data-street'), 
+                    barangay: opt.getAttribute('data-barangay'), 
+                    city: opt.getAttribute('data-city'), 
+                    province: opt.getAttribute('data-province'), 
+                    postal: opt.getAttribute('data-postal') 
+                };
+                
+                // Populate farm form fields
+                document.getElementById('farmName').value = selectedFarm.name;
+                document.getElementById('farmStreet').value = selectedFarm.street;
+                document.getElementById('farmBarangay').value = selectedFarm.barangay;
+                document.getElementById('farmCity').value = selectedFarm.city;
+                document.getElementById('farmProvince').value = selectedFarm.province;
+                document.getElementById('farmPostal').value = selectedFarm.postal;
+            });
+
+            document.getElementById('btnUpdateFarm').addEventListener('click', async ()=>{
+                try{
+                    if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; }
+                    await upsertFarm(selectedUser.id);
+                    alert('Updated');
+                } catch(e){ alert(e.message||'Update failed'); }
+            });
+            document.getElementById('btnDelFarm').addEventListener('click', async ()=>{
+                try{
+                    if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; }
+                    if(!selectedFarm){ alert('Select a farm from the list'); return; }
+                    if(!confirm('Delete this farm?')) return;
+                    const res = await fetch('../php/admin_farms.php',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedFarm.id})});
+                    const d = await res.json(); if(!d.success) throw new Error(d.message||'Delete failed');
+                    await loadFarmsByUser(selectedUser.id); clearFarm();
+                    alert('Deleted');
+                } catch(e){ alert(e.message||'Delete failed'); }
+            });
+
+            // Overview stats removed on this page
+        });
+    </script>
+</body>
+</html>
+
+

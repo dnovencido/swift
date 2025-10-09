@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SWIFT 2.0 - Dashboard</title>
+    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="../css/style.css?v=1759866206" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Modal Styles -->
+    <style>
+        .modal {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-content {
+            transform: translateY(-50px);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+        
+        .schedule-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        
+        #closeModal:hover {
+            background-color: rgba(255,255,255,0.2) !important;
+        }
+        
+        #refreshSchedules:hover {
+            background-color: #218838 !important;
+        }
+        
+        /* Custom Days Styling */
+        #sprinklerCustomDays, #heatCustomDays {
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 8px;
+            background: #fff;
+            margin-top: 8px;
+        }
+        
+        #sprinklerCustomDays label, #heatCustomDays label {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 2px;
+            transition: all 0.2s ease;
+        }
+        
+        #sprinklerCustomDays label:hover, #heatCustomDays label:hover {
+            background: #e9ecef;
+            border-color: #0A4174;
+        }
+        
+        #sprinklerCustomDays input[type="checkbox"]:checked + span,
+        #heatCustomDays input[type="checkbox"]:checked + span {
+            color: #0A4174;
+            font-weight: 600;
+        }
+        
+        #sprinklerCustomDays label:has(input:checked),
+        #heatCustomDays label:has(input:checked) {
+            background: #d1ecf1;
+            border-color: #0A4174;
+            color: #0A4174;
+        }
+        
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95% !important;
+                margin: 10% auto !important;
+            }
+            
+            .schedule-item {
+                padding: 12px !important;
+            }
+            
+            .schedule-item h4 {
+                font-size: 14px !important;
+            }
+            
+            .schedule-item p {
+                font-size: 12px !important;
+            }
+            
+            #sprinklerCustomDays, #heatCustomDays {
+                padding: 6px;
+            }
+            
+            #sprinklerCustomDays label, #heatCustomDays label {
+                padding: 3px 6px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-item active"><i class="fas fa-home"></i><span>Dashboard</span></a>
+                <a href="dailyreport.html" class="nav-item"><i class="fa-solid fa-clipboard"></i><span>Daily Report</span></a>
+                <a href="weeklyreport.html" class="nav-item"><i class="fa-solid fa-calendar-week"></i><span>Weekly Report</span></a>
+            </div>
+        </div>
+        <div class="nav-menu">
+            <a href="../admin/login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </div>
+    <div class="main-content" style="overflow:hidden;">
+        <div class="header"><div class="welcome-section"><p class="greeting" id="greeting">&nbsp;</p><h1 class="welcome-title">DASHBOARD</h1></div></div>
+        <div class="dashboard-body" style="display:flex; gap: 20px; align-items: stretch; margin-top: 10px;">
+            <div class="left-metrics" style="width: 280px; height: calc(100vh - 170px); min-width: 260px; display:flex; flex-direction:column; gap: 20px;">
+                <div class="control-card" style="display:flex; flex-direction:column; gap:12px; height:100%;">
+                    <div class="control-info" style="text-align:center;"><h2 class="control-title">Indicators</h2></div>
+                    <div class="main-controls" style="display:flex; flex-direction:column; gap:12px; height:100%;">
+                        <div class="transfer-card" style="display:flex; align-items:center; gap:12px; flex:1; justify-content:center;"><div class="card-icon"><i class="fa-solid fa-temperature-half"></i></div><div><p class="card-title" style="margin:0;">Temperature</p><h2 class="card-amount" id="temperature" style="margin:2px 0 0 0;">--</h2></div></div>
+                        <div class="transfer-card" style="display:flex; align-items:center; gap:12px; flex:1; justify-content:center;"><div class="card-icon"><i class="fa-solid fa-droplet"></i></div><div><p class="card-title" style="margin:0;">Humidity</p><h2 class="card-amount" id="humidity" style="margin:2px 0 0 0;">--</h2></div></div>
+                        <div class="transfer-card" style="display:flex; align-items:center; gap:12px; flex:1; justify-content:center;"><div class="card-icon"><i class="fa-solid fa-flask"></i></div><div><p class="card-title" style="margin:0;">Ammonia</p><h2 class="card-amount" id="ammonia" style="margin:2px 0 0 0;">--</h2></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="side-controls" style="width: 320px; min-width: 280px; height: calc(100vh - 170px); display:flex; flex-direction:column;">
+                <div class="control-card" style="height: 100%; display:flex; flex-direction:column; gap:20px;">
+                    <div class="control-info" style="text-align:center;"><h2 class="control-title">Device Status</h2></div>
+                    <div class="main-controls" style="display:flex; flex-direction:column; gap:12px; height:100%;">
+                        <div class="transfer-card" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:12px; flex:1;"><h4 style="margin:6px 0;">Water Sprinkler: <span id="waterSprinklerStatus">--</span></h4><div style="font-size:12px; color:#666;">Status Only</div></div>
+                        <div class="transfer-card" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:12px; flex:1;"><h4 style="margin:6px 0;">Heat Bulb: <span id="heatStatus">--</span></h4><div style="font-size:12px; color:#666;">Status Only</div></div>
+                        <div class="transfer-card" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:12px; flex:1;"><h4 style="margin:6px 0;">Mode: <span id="modeStatus">--</span></h4><div style="font-size:12px; color:#666;">Auto Mode</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="heatmap-center" style="flex: 1; display:flex; flex-direction:column; align-items:left; min-width: 0;">
+                    <div class="control-card" style="height: calc(100vh - 195px); display:flex; flex-direction:column; gap:12px;">
+                    <div class="control-info" style="display:flex; justify-content:space-between; align-items:center;"><h2 class="control-title">Device Scheduling</h2><button id="showSchedules" class="schedule-btn" style="background:#28a745; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:500; font-size:13px;">
+                        <i class="fas fa-calendar-alt"></i> Show All Schedules
+                    </button></div>
+                    <div class="scheduling-container" style="flex:1; display:flex; flex-direction:column; gap:8px; padding:10px;">
+                    
+                    
+                        <!-- Water Sprinkler Schedule Panel -->
+                        <div class="schedule-panel" style="background:#f8f9fa; border-radius:8px; padding:12px; border:1px solid #e9ecef; flex:1;">
+                            <h3 style="margin:0 0 8px 0; color:#0A4174; display:flex; align-items:center; gap:6px; font-size:14px;">
+                                <i class="fas fa-shower"></i> Water Sprinkler Schedule
+                            </h3>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <label style="min-width:40px; font-weight:500; font-size:12px;">Date:</label>
+                                    <input type="date" id="sprinklerDate" class="schedule-input" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <label style="min-width:40px; font-weight:500; font-size:12px;">Time:</label>
+                                    <input type="time" id="sprinklerTime" class="schedule-input" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <label style="min-width:40px; font-weight:500; font-size:12px;">Repeat:</label>
+                                    <select id="sprinklerRepeat" class="schedule-input" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                                        <option value="once">Once Only</option>
+                                        <option value="daily">Every Day</option>
+                                        <option value="weekdays">Weekdays Only</option>
+                                        <option value="weekends">Weekends Only</option>
+                                        <option value="custom">Custom Days</option>
+                                    </select>
+                                </div>
+                                <div id="sprinklerCustomDays" style="display:none; flex-wrap:wrap; gap:4px; margin-top:2px;">
+                                    <div style="width:100%; font-size:10px; color:#666; margin-bottom:4px; font-style:italic;">
+                                        <i class="fas fa-info-circle"></i> Select specific days for custom schedule
+                                    </div>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="monday" style="margin-right:4px;"> Mon</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="tuesday" style="margin-right:4px;"> Tue</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="wednesday" style="margin-right:4px;"> Wed</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="thursday" style="margin-right:4px;"> Thu</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="friday" style="margin-right:4px;"> Fri</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="saturday" style="margin-right:4px;"> Sat</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="sunday" style="margin-right:4px;"> Sun</label>
+                                </div>
+                                <button id="addSprinklerSchedule" class="schedule-btn" style="background:#0A4174; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500; font-size:12px; margin-top:2px;">
+                                    <i class="fas fa-plus"></i> Add Schedule
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Heat Bulb Schedule Panel -->
+                        <div class="schedule-panel" style="background:#f8f9fa; border-radius:8px; padding:12px; border:1px solid #e9ecef; flex:1;">
+                            <h3 style="margin:0 0 8px 0; color:#0A4174; display:flex; align-items:center; gap:6px; font-size:14px;">
+                                <i class="fas fa-lightbulb"></i> Heat Bulb Schedule
+                            </h3>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <label style="min-width:40px; font-weight:500; font-size:12px;">Date:</label>
+                                    <input type="date" id="heatDate" class="schedule-input" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <label style="min-width:40px; font-weight:500; font-size:12px;">Time:</label>
+                                    <input type="time" id="heatTime" class="schedule-input" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <label style="min-width:40px; font-weight:500; font-size:12px;">Repeat:</label>
+                                    <select id="heatRepeat" class="schedule-input" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                                        <option value="once">Once Only</option>
+                                        <option value="daily">Every Day</option>
+                                        <option value="weekdays">Weekdays Only</option>
+                                        <option value="weekends">Weekends Only</option>
+                                        <option value="custom">Custom Days</option>
+                                    </select>
+                                </div>
+                                <div id="heatCustomDays" style="display:none; flex-wrap:wrap; gap:4px; margin-top:2px;">
+                                    <div style="width:100%; font-size:10px; color:#666; margin-bottom:4px; font-style:italic;">
+                                        <i class="fas fa-info-circle"></i> Select specific days for custom schedule
+                                    </div>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="monday" style="margin-right:4px;"> Mon</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="tuesday" style="margin-right:4px;"> Tue</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="wednesday" style="margin-right:4px;"> Wed</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="thursday" style="margin-right:4px;"> Thu</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="friday" style="margin-right:4px;"> Fri</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="saturday" style="margin-right:4px;"> Sat</label>
+                                    <label style="display:flex; align-items:center; gap:2px; font-size:11px; cursor:pointer; padding:2px 4px; border-radius:3px; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#e9ecef'" onmouseout="this.style.backgroundColor='transparent'"><input type="checkbox" value="sunday" style="margin-right:4px;"> Sun</label>
+                                </div>
+                                <button id="addHeatSchedule" class="schedule-btn" style="background:#0A4174; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500; font-size:12px; margin-top:2px;">
+                                    <i class="fas fa-plus"></i> Add Schedule
+                                </button>
+                            </div>
+                        </div>
+
+                        
+
+                        <!-- Schedules List (Hidden - now handled by modal) -->
+                        <div id="schedulesList" style="display:none;">
+                            <!-- This div is kept for compatibility but content is moved to modal -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Live Sensor Graphs Section -->
+        <div style="margin-top: 30px; width: 100%;">
+            <div class="control-card" style="display:flex; flex-direction:column; gap:20px;">
+                <!-- Time Filter Controls -->
+                <div class="control-info" style="text-align:center; display:flex; justify-content:space-between; align-items:center;">
+                    <h2 class="control-title" style="margin:0;">Live Sensor Graphs</h2>
+                    <div class="time-filter-controls" style="display:flex; gap:8px;">
+                        <button class="time-filter-btn active" data-filter="minute">Minute</button>
+                        <button class="time-filter-btn" data-filter="hour">Hour</button>
+                        <button class="time-filter-btn" data-filter="day">Day</button>
+                    </div>
+                </div>
+                
+                <!-- Charts Container -->
+                <div style="display:flex; flex-direction:column; gap:20px; width:100%;">
+                    <!-- Temperature Chart -->
+                    <div class="chart-container" style="width:100%; height:300px;">
+                        <div class="chart-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="margin:0; color:#ff6b6b;"><i class="fas fa-thermometer-half"></i> Temperature</h3>
+                            <span class="chart-status" style="font-size:12px; color:#666;">Loading...</span>
+                        </div>
+                        <canvas id="temperatureChart" width="800" height="260" style="width:100%; height:calc(100% - 40px);"></canvas>
+                    </div>
+                    
+                    <!-- Humidity Chart -->
+                    <div class="chart-container" style="width:100%; height:300px;">
+                        <div class="chart-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="margin:0; color:#4ecdc4;"><i class="fas fa-tint"></i> Humidity</h3>
+                            <span class="chart-status" style="font-size:12px; color:#666;">Loading...</span>
+                        </div>
+                        <canvas id="humidityChart" width="800" height="260" style="width:100%; height:calc(100% - 40px);"></canvas>
+                    </div>
+                    
+                    <!-- Ammonia Chart -->
+                    <div class="chart-container" style="width:100%; height:300px;">
+                        <div class="chart-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="margin:0; color:#45b7d1;"><i class="fas fa-flask"></i> Ammonia</h3>
+                            <span class="chart-status" style="font-size:12px; color:#666;">Loading...</span>
+                        </div>
+                        <canvas id="ammoniaChart" width="800" height="260" style="width:100%; height:calc(100% - 40px);"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Schedules Modal -->
+    <div id="schedulesModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color: #fff; margin: 5% auto; padding: 0; border-radius: 8px; width: 90%; max-width: 800px; max-height: 80vh; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #0A4174, #1e5f99); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 20px; font-weight: 600;">
+                    <i class="fas fa-calendar-alt"></i> All Device Schedules
+                </h2>
+                <button id="closeModal" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.3s;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding: 20px; max-height: 60vh; overflow-y: auto;">
+                <div id="schedulesContent">
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <i class="fas fa-calendar-plus" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                        <p style="margin: 0; font-size: 16px;">No schedules set</p>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.7;">Create your first schedule using the forms above</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="modal-footer" style="background: #f8f9fa; padding: 15px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 12px; color: #666;">
+                    <i class="fas fa-info-circle"></i> Click edit to modify or delete to remove schedules
+                </div>
+                <button id="refreshSchedules" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', ()=>{
+            // Redirect unauthenticated users to login
+            try{ const u = JSON.parse(localStorage.getItem('swift_user')||'null'); if(!u){ window.location.href = '../admin/login.html'; return; } }catch(e){ window.location.href='../admin/login.html'; return; }
+            
+            // Log dashboard access
+            fetch('../php/client_activity_logger_endpoint.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'log_dashboard_access' })
+            }).catch(() => {}); // Silent fail - don't interrupt dashboard loading
+        });
+    </script>
+    
+    <!-- Database-Integrated Scheduling System Script -->
+    <script>
+        // Global schedule storage
+        let schedules = [];
+        let editingScheduleId = null;
+        
+        // Initialize scheduling system
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSchedulingSystem();
+        });
+        
+        function initializeSchedulingSystem() {
+            // Load schedules from database
+            loadSchedulesFromDatabase();
+            
+            // Set up event listeners
+            setupEventListeners();
+        }
+        
+        function setupEventListeners() {
+            // Custom days visibility for sprinkler
+            const sprinklerRepeat = document.getElementById('sprinklerRepeat');
+            const sprinklerCustomDays = document.getElementById('sprinklerCustomDays');
+            
+            sprinklerRepeat.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    sprinklerCustomDays.style.display = 'flex';
+                    // Add a small indicator
+                    sprinklerCustomDays.style.border = '2px solid #0A4174';
+                    sprinklerCustomDays.style.backgroundColor = '#f8f9fa';
+                } else {
+                    sprinklerCustomDays.style.display = 'none';
+                    sprinklerCustomDays.style.border = '1px solid #e9ecef';
+                    sprinklerCustomDays.style.backgroundColor = '#fff';
+                    // Clear custom day selections
+                    sprinklerCustomDays.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                }
+            });
+            
+            // Custom days visibility for heat bulb
+            const heatRepeat = document.getElementById('heatRepeat');
+            const heatCustomDays = document.getElementById('heatCustomDays');
+            
+            heatRepeat.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    heatCustomDays.style.display = 'flex';
+                    // Add a small indicator
+                    heatCustomDays.style.border = '2px solid #0A4174';
+                    heatCustomDays.style.backgroundColor = '#f8f9fa';
+                } else {
+                    heatCustomDays.style.display = 'none';
+                    heatCustomDays.style.border = '1px solid #e9ecef';
+                    heatCustomDays.style.backgroundColor = '#fff';
+                    // Clear custom day selections
+                    heatCustomDays.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                }
+            });
+            
+            // Add schedule buttons
+            document.getElementById('addSprinklerSchedule').addEventListener('click', function() {
+                addSchedule('sprinkler');
+            });
+            
+            document.getElementById('addHeatSchedule').addEventListener('click', function() {
+                addSchedule('heat_bulb');
+            });
+            
+            // Show schedules modal
+            document.getElementById('showSchedules').addEventListener('click', function() {
+                showSchedulesModal();
+            });
+            
+            // Close modal events
+            document.getElementById('closeModal').addEventListener('click', function() {
+                hideSchedulesModal();
+            });
+            
+            // Close modal when clicking outside
+            document.getElementById('schedulesModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideSchedulesModal();
+                }
+            });
+            
+            // Refresh schedules button
+            document.getElementById('refreshSchedules').addEventListener('click', function() {
+                loadSchedulesFromDatabase();
+            });
+            
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    hideSchedulesModal();
+                }
+            });
+        }
+        
+        // Load schedules from database
+        async function loadSchedulesFromDatabase() {
+            try {
+                const response = await fetch('../php/api/v1/schedules.php', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    schedules = result.data;
+                    updateSchedulesDisplay();
+                } else {
+                    console.error('Error loading schedules:', result.message);
+                    showNotification('Error loading schedules: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error fetching schedules:', error);
+                showNotification('Error connecting to server', 'error');
+            }
+        }
+        
+        // Add or update schedule
+        async function addSchedule(deviceType) {
+            const isSprinkler = deviceType === 'sprinkler';
+            const prefix = isSprinkler ? 'sprinkler' : 'heat';
+            
+            // Get form values
+            const dateInput = document.getElementById(prefix + 'Date');
+            const timeInput = document.getElementById(prefix + 'Time');
+            const repeatSelect = document.getElementById(prefix + 'Repeat');
+            const customDaysContainer = document.getElementById(prefix + 'CustomDays');
+            
+            const date = dateInput.value;
+            const time = timeInput.value;
+            const repeat = repeatSelect.value;
+            
+            // Validation
+            if (!date || !time) {
+                alert('Please select both date and time.');
+                return;
+            }
+            
+            // Get custom days if repeat is 'custom'
+            let customDays = [];
+            if (repeat === 'custom') {
+                const checkedDays = customDaysContainer.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkedDays.length === 0) {
+                    alert('Please select at least one day for custom repeat.');
+                    return;
+                }
+                customDays = Array.from(checkedDays).map(checkbox => checkbox.value);
+            }
+            
+            // Create schedule object
+            const scheduleData = {
+                device_type: deviceType,
+                schedule_name: `${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)} Schedule`,
+                schedule_date: date,
+                schedule_time: time,
+                repeat_type: repeat,
+                custom_days: customDays
+            };
+            
+            try {
+                let response;
+                if (editingScheduleId) {
+                    // Update existing schedule
+                    scheduleData.id = editingScheduleId;
+                    response = await fetch('../php/api/v1/schedules.php', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(scheduleData)
+                    });
+                } else {
+                    // Create new schedule
+                    response = await fetch('../php/api/v1/schedules.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(scheduleData)
+                    });
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reload schedules from database
+                    await loadSchedulesFromDatabase();
+                    
+                    // Clear form
+                    clearScheduleForm(prefix);
+                    
+                    // Reset editing state
+                    editingScheduleId = null;
+                    updateAddButtonText(prefix, false);
+                    
+                    // Show success message
+                    const action = editingScheduleId ? 'updated' : 'added';
+                    showNotification(`${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)} schedule ${action} successfully!`);
+                } else {
+                    showNotification('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving schedule:', error);
+                showNotification('Error connecting to server', 'error');
+            }
+        }
+        
+        
+        // Update add button text
+        function updateAddButtonText(prefix, isEditing) {
+            const button = document.getElementById('add' + prefix.charAt(0).toUpperCase() + prefix.slice(1) + 'Schedule');
+            if (isEditing) {
+                button.innerHTML = '<i class="fas fa-save"></i> Update Schedule';
+                button.style.background = '#ffc107';
+            } else {
+                button.innerHTML = '<i class="fas fa-plus"></i> Add Schedule';
+                button.style.background = '#0A4174';
+            }
+        }
+        
+        // Clear schedule form
+        function clearScheduleForm(prefix) {
+            document.getElementById(prefix + 'Date').value = '';
+            document.getElementById(prefix + 'Time').value = '';
+            document.getElementById(prefix + 'Repeat').value = 'once';
+            
+            // Hide and clear custom days
+            const customDaysContainer = document.getElementById(prefix + 'CustomDays');
+            customDaysContainer.style.display = 'none';
+            customDaysContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+        
+        // Show schedules modal
+        function showSchedulesModal() {
+            const modal = document.getElementById('schedulesModal');
+            modal.style.display = 'block';
+            
+            // Add fade-in animation
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                modal.classList.add('show');
+            }, 10);
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            
+            // Update button text
+            const showButton = document.getElementById('showSchedules');
+            showButton.innerHTML = '<i class="fas fa-calendar-alt"></i> Hide Schedules';
+        }
+        
+        // Hide schedules modal
+        function hideSchedulesModal() {
+            const modal = document.getElementById('schedulesModal');
+            modal.style.opacity = '0';
+            modal.classList.remove('show');
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+            
+            // Restore body scroll
+            document.body.style.overflow = 'auto';
+            
+            // Update button text
+            const showButton = document.getElementById('showSchedules');
+            showButton.innerHTML = '<i class="fas fa-calendar-alt"></i> Show All Schedules';
+        }
+        
+        // Update schedules display
+        function updateSchedulesDisplay() {
+            const schedulesContent = document.getElementById('schedulesContent');
+            
+            if (schedules.length === 0) {
+                schedulesContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <i class="fas fa-calendar-plus" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                        <p style="margin: 0; font-size: 16px;">No schedules set</p>
+                        <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.7;">Create your first schedule using the forms above</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort schedules by date and time
+            const sortedSchedules = schedules.sort((a, b) => {
+                const dateA = new Date(a.schedule_date + ' ' + a.schedule_time);
+                const dateB = new Date(b.schedule_date + ' ' + b.schedule_time);
+                return dateA - dateB;
+            });
+            
+            // Create schedule list HTML with enhanced modal styling
+            let schedulesHTML = '<div style="display: grid; gap: 12px;">';
+            
+            sortedSchedules.forEach(schedule => {
+                const formattedTime = formatTime(schedule.schedule_time);
+                const repeatText = formatRepeatText(schedule.repeat_type, schedule.custom_days);
+                const deviceName = schedule.device_type === 'sprinkler' ? 'Sprinkler' : 'Heat Bulb';
+                const deviceIcon = schedule.device_type === 'sprinkler' ? 'fa-shower' : 'fa-lightbulb';
+                const deviceColor = schedule.device_type === 'sprinkler' ? '#17a2b8' : '#ffc107';
+                
+                schedulesHTML += `
+                    <div class="schedule-item" id="schedule-${schedule.id}" style="background: #fff; border-radius: 8px; padding: 16px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                        <!-- View Mode -->
+                        <div id="view-mode-${schedule.id}">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="background: ${deviceColor}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                                        <i class="fas ${deviceIcon}"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="margin: 0; color: #0A4174; font-size: 16px; font-weight: 600;">${deviceName}</h4>
+                                        <p style="margin: 2px 0 0 0; color: #666; font-size: 14px;">${schedule.schedule_date} at ${formattedTime}</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 6px;">
+                                    <button onclick="showEditForm(${schedule.id})" style="background: #17a2b8; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background-color 0.3s;" title="Edit Schedule" onmouseover="this.style.background='#138496'" onmouseout="this.style.background='#17a2b8'">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button onclick="removeSchedule(${schedule.id})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background-color 0.3s;" title="Delete Schedule" onmouseover="this.style.background='#c82333'" onmouseout="this.style.background='#dc3545'">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: #666; font-size: 13px;">
+                                    <i class="fas fa-repeat"></i> Repeat: <strong>${repeatText}</strong>
+                                </div>
+                                ${schedule.execution_count > 0 ? `
+                                    <div style="color: #28a745; font-size: 12px; background: #d4edda; padding: 4px 8px; border-radius: 12px;">
+                                        <i class="fas fa-check-circle"></i> Executed ${schedule.execution_count} times
+                                    </div>
+                                ` : `
+                                    <div style="color: #6c757d; font-size: 12px; background: #f8f9fa; padding: 4px 8px; border-radius: 12px;">
+                                        <i class="fas fa-clock"></i> Not executed yet
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                        
+                        <!-- Edit Mode (Hidden by default) -->
+                        <div id="edit-mode-${schedule.id}" style="display: none;">
+                            <div style="background: #f8f9fa; border-radius: 6px; padding: 12px; border: 2px solid #0A4174;">
+                                <h5 style="margin: 0 0 12px 0; color: #0A4174; font-size: 14px;">
+                                    <i class="fas fa-edit"></i> Edit Schedule
+                                </h5>
+                                <div style="display: grid; gap: 8px;">
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <label style="min-width: 50px; font-weight: 500; font-size: 12px;">Date:</label>
+                                        <input type="date" id="edit-date-${schedule.id}" value="${schedule.schedule_date}" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <label style="min-width: 50px; font-weight: 500; font-size: 12px;">Time:</label>
+                                        <input type="time" id="edit-time-${schedule.id}" value="${schedule.schedule_time}" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <label style="min-width: 50px; font-weight: 500; font-size: 12px;">Repeat:</label>
+                                        <select id="edit-repeat-${schedule.id}" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" onchange="toggleCustomDaysEdit(${schedule.id})">
+                                            <option value="once" ${schedule.repeat_type === 'once' ? 'selected' : ''}>Once Only</option>
+                                            <option value="daily" ${schedule.repeat_type === 'daily' ? 'selected' : ''}>Every Day</option>
+                                            <option value="weekdays" ${schedule.repeat_type === 'weekdays' ? 'selected' : ''}>Weekdays Only</option>
+                                            <option value="weekends" ${schedule.repeat_type === 'weekends' ? 'selected' : ''}>Weekends Only</option>
+                                            <option value="custom" ${schedule.repeat_type === 'custom' ? 'selected' : ''}>Custom Days</option>
+                                        </select>
+                                    </div>
+                                    <div id="edit-custom-days-${schedule.id}" style="display: ${schedule.repeat_type === 'custom' ? 'flex' : 'none'}; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+                                        <div style="width: 100%; font-size: 10px; color: #666; margin-bottom: 4px; font-style: italic;">
+                                            <i class="fas fa-info-circle"></i> Select specific days
+                                        </div>
+                                        ${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => `
+                                            <label style="display: flex; align-items: center; gap: 2px; font-size: 11px; cursor: pointer; padding: 2px 4px; border-radius: 3px; background: #f8f9fa; border: 1px solid #dee2e6;">
+                                                <input type="checkbox" value="${day}" ${schedule.custom_days.includes(day) ? 'checked' : ''} style="margin-right: 4px;">
+                                                ${day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+                                        <button onclick="cancelEdit(${schedule.id})" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                        <button onclick="saveEdit(${schedule.id})" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            schedulesHTML += '</div>';
+            schedulesContent.innerHTML = schedulesHTML;
+        }
+        
+        // Format time for display
+        function formatTime(timeString) {
+            const [hours, minutes] = timeString.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+        
+        // Format repeat text for display
+        function formatRepeatText(repeat, customDays) {
+            switch (repeat) {
+                case 'once':
+                    return 'Once Only';
+                case 'daily':
+                    return 'Daily';
+                case 'weekdays':
+                    return 'Weekdays Only';
+                case 'weekends':
+                    return 'Weekends Only';
+                case 'custom':
+                    return customDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ');
+                default:
+                    return repeat;
+            }
+        }
+        
+        // Remove schedule with enhanced confirmation
+        async function removeSchedule(scheduleId) {
+            const schedule = schedules.find(s => s.id == scheduleId);
+            if (!schedule) return;
+            
+            const deviceName = schedule.device_type === 'sprinkler' ? 'Sprinkler' : 'Heat Bulb';
+            const formattedTime = formatTime(schedule.schedule_time);
+            
+            // Enhanced confirmation dialog
+            const confirmMessage = `Are you sure you want to delete this schedule?\n\n${deviceName} Schedule\nDate: ${schedule.schedule_date}\nTime: ${formattedTime}\nRepeat: ${formatRepeatText(schedule.repeat_type, schedule.custom_days)}\n\nThis action cannot be undone.`;
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    const response = await fetch('../php/api/v1/schedules.php', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ id: scheduleId })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Reload schedules from database
+                        await loadSchedulesFromDatabase();
+                        showNotification(`${deviceName} schedule deleted successfully!`);
+                    } else {
+                        showNotification('Error: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting schedule:', error);
+                    showNotification('Error connecting to server', 'error');
+                }
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            const bgColor = type === 'error' ? '#dc3545' : '#28a745';
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${bgColor};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 4px;
+                font-size: 14px;
+                z-index: 1000;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+        
+        // Show edit form within modal
+        function showEditForm(scheduleId) {
+            const viewMode = document.getElementById(`view-mode-${scheduleId}`);
+            const editMode = document.getElementById(`edit-mode-${scheduleId}`);
+            
+            if (viewMode && editMode) {
+                viewMode.style.display = 'none';
+                editMode.style.display = 'block';
+            }
+        }
+        
+        // Cancel edit and return to view mode
+        function cancelEdit(scheduleId) {
+            const viewMode = document.getElementById(`view-mode-${scheduleId}`);
+            const editMode = document.getElementById(`edit-mode-${scheduleId}`);
+            
+            if (viewMode && editMode) {
+                editMode.style.display = 'none';
+                viewMode.style.display = 'block';
+            }
+        }
+        
+        // Save edit changes
+        async function saveEdit(scheduleId) {
+            const schedule = schedules.find(s => s.id == scheduleId);
+            if (!schedule) return;
+            
+            // Get form values
+            const date = document.getElementById(`edit-date-${scheduleId}`).value;
+            const time = document.getElementById(`edit-time-${scheduleId}`).value;
+            const repeat = document.getElementById(`edit-repeat-${scheduleId}`).value;
+            
+            // Validation
+            if (!date || !time) {
+                showNotification('Please select both date and time.', 'error');
+                return;
+            }
+            
+            // Get custom days if repeat is 'custom'
+            let customDays = [];
+            if (repeat === 'custom') {
+                const customDaysContainer = document.getElementById(`edit-custom-days-${scheduleId}`);
+                const checkedDays = customDaysContainer.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkedDays.length === 0) {
+                    showNotification('Please select at least one day for custom repeat.', 'error');
+                    return;
+                }
+                customDays = Array.from(checkedDays).map(checkbox => checkbox.value);
+            }
+            
+            // Create update data
+            const updateData = {
+                id: scheduleId,
+                device_type: schedule.device_type,
+                schedule_name: schedule.schedule_name,
+                schedule_date: date,
+                schedule_time: time,
+                repeat_type: repeat,
+                custom_days: customDays
+            };
+            
+            try {
+                const response = await fetch('../php/api/v1/schedules.php', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reload schedules from database
+                    await loadSchedulesFromDatabase();
+                    showNotification('Schedule updated successfully!');
+                } else {
+                    showNotification('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating schedule:', error);
+                showNotification('Error connecting to server', 'error');
+            }
+        }
+        
+        // Toggle custom days visibility in edit mode
+        function toggleCustomDaysEdit(scheduleId) {
+            const repeatSelect = document.getElementById(`edit-repeat-${scheduleId}`);
+            const customDaysContainer = document.getElementById(`edit-custom-days-${scheduleId}`);
+            
+            if (repeatSelect.value === 'custom') {
+                customDaysContainer.style.display = 'flex';
+            } else {
+                customDaysContainer.style.display = 'none';
+                // Clear custom day selections
+                customDaysContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            }
+        }
+        
+        // Make functions globally accessible
+        window.removeSchedule = removeSchedule;
+        window.showEditForm = showEditForm;
+        window.cancelEdit = cancelEdit;
+        window.saveEdit = saveEdit;
+        window.toggleCustomDaysEdit = toggleCustomDaysEdit;
+        
+        // Debug function to test custom days (can be removed in production)
+        window.testCustomDays = function() {
+            console.log('Testing custom days functionality...');
+            
+            // Test sprinkler custom days
+            const sprinklerRepeat = document.getElementById('sprinklerRepeat');
+            const sprinklerCustomDays = document.getElementById('sprinklerCustomDays');
+            
+            console.log('Sprinkler repeat dropdown:', sprinklerRepeat.value);
+            console.log('Sprinkler custom days display:', sprinklerCustomDays.style.display);
+            
+            // Test heat custom days
+            const heatRepeat = document.getElementById('heatRepeat');
+            const heatCustomDays = document.getElementById('heatCustomDays');
+            
+            console.log('Heat repeat dropdown:', heatRepeat.value);
+            console.log('Heat custom days display:', heatCustomDays.style.display);
+            
+            // Test setting custom
+            sprinklerRepeat.value = 'custom';
+            sprinklerRepeat.dispatchEvent(new Event('change'));
+            
+            setTimeout(() => {
+                console.log('After setting sprinkler to custom:', sprinklerCustomDays.style.display);
+            }, 100);
+        };
+    </script>
+    <script src="../js/config.js"></script>
+    <script src="../js/live-charts.js"></script>
+    <script src="../js/dashboard.js"></script>
+</body>
+</html>
+
+
