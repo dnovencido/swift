@@ -18,10 +18,10 @@ if (!defined('SWIFT_SYSTEM')) {
 // Database Configuration
 return [
     'client' => [
-        'host' => 'localhost:3306',
+        'host' => 'localhost',
         'database' => 'swift_client',
-        'user' => 'root',
-        'password' => '',
+        'user' => 'swift',
+        'password' => 'swift@2025',
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -31,10 +31,10 @@ return [
         ]
     ],
     'admin' => [
-        'host' => 'localhost:3306',
+        'host' => 'localhost',
         'database' => 'swift_admin',
-        'user' => 'root',
-        'password' => '',
+        'user' => 'swift',
+        'password' => 'swift@2025',
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
