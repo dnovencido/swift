@@ -1,29 +1,17 @@
-/*
- * SWIFT IoT Smart Swine Farming System - Stylesheet
- * Version: 2.1.0 (Production Ready)
- * 
- * Modern, responsive design with accessibility features
- * Optimized for mobile, tablet, and desktop devices
- * 
- * @author SWIFT Development Team
- * @version 2.1.0
- * @since 2024-01-15
- */
+
 
 :root {
-    /* SWIFT Brand Colors */
-    --primary-color: #1877f2;      /* Meta blue */
-    --primary-dark: #166fe5;       /* Darker blue for hovers */
-    --primary-light: #e7f3ff;      /* Light blue background */
-    --primary-gradient: linear-gradient(135deg, #1877f2 0%, #166fe5 100%);
     
-    /* Text Colors */
+    --primary-color: #1877f2;      
+    --primary-dark: #166fe5;       
+    --primary-light: #e7f3ff;      
+    --primary-gradient: linear-gradient(135deg, #1877f2 0%, #166fe5 100%);
+
     --text-primary: #1c1e21;
     --text-secondary: #65676b;
     --text-tertiary: #8a8d91;
     --text-inverse: #ffffff;
-    
-    /* Neutral Colors */
+
     --gray-50: #f0f2f5;
     --gray-100: #e4e6ea;
     --gray-200: #dadde1;
@@ -34,8 +22,7 @@
     --gray-700: #3a3b3c;
     --gray-800: #242526;
     --gray-900: #18191a;
-    
-    /* Status Colors */
+
     --white: #ffffff;
     --success: #42b883;
     --success-light: #d4edda;
@@ -49,8 +36,7 @@
     --info: #17a2b8;
     --info-light: #d1ecf1;
     --info-dark: #138496;
-    
-    /* Shadows and Effects */
+
     --card-shadow: 0 2px 4px rgba(0,0,0,.1), 0 8px 16px rgba(0,0,0,.1);
     --card-shadow-hover: 0 4px 8px rgba(0,0,0,.15), 0 12px 24px rgba(0,0,0,.15);
     --card-shadow-focus: 0 0 0 3px rgba(24, 119, 242, 0.1);
@@ -58,16 +44,14 @@
     --border-radius-sm: 4px;
     --border-radius-lg: 12px;
     --border-radius-xl: 16px;
-    
-    /* Spacing Scale */
+
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
     --space-lg: 24px;
     --space-xl: 32px;
     --space-2xl: 48px;
-    
-    /* Typography Scale */
+
     --font-size-xs: 12px;
     --font-size-sm: 14px;
     --font-size-md: 16px;
@@ -75,32 +59,28 @@
     --font-size-xl: 20px;
     --font-size-2xl: 24px;
     --font-size-3xl: 32px;
-    
-    /* Line Heights */
+
     --line-height-tight: 1.25;
     --line-height-normal: 1.5;
     --line-height-relaxed: 1.75;
-    
-    /* Transitions */
+
     --transition-fast: 0.15s ease;
     --transition-normal: 0.2s ease;
     --transition-slow: 0.3s ease;
-    
-    /* Breakpoints */
+
     --breakpoint-sm: 576px;
     --breakpoint-md: 768px;
     --breakpoint-lg: 992px;
     --breakpoint-xl: 1200px;
     --breakpoint-2xl: 1400px;
 }
-/* Reset and Base Styles */
+
 * { 
     box-sizing: border-box; 
     margin: 0; 
     padding: 0; 
 }
 
-/* Form Element Reset */
 input,
 textarea,
 select,
@@ -117,7 +97,6 @@ button {
     line-height: inherit;
 }
 
-/* Ensure form elements are visible */
 input:not([type="hidden"]),
 textarea,
 select {
@@ -142,7 +121,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Focus Management for Accessibility */
 *:focus {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
@@ -152,7 +130,6 @@ body {
     outline: none;
 }
 
-/* Form Element Focus Styles */
 input:focus,
 textarea:focus,
 select:focus,
@@ -163,7 +140,6 @@ button:focus {
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Specific focus styles for different input types */
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
@@ -180,7 +156,6 @@ input[type="tel"]:focus {
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Textarea focus styles */
 textarea:focus {
     outline: 2px solid var(--primary-color) !important;
     outline-offset: 2px !important;
@@ -188,7 +163,6 @@ textarea:focus {
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Select dropdown focus styles */
 select:focus {
     outline: 2px solid var(--primary-color) !important;
     outline-offset: 2px !important;
@@ -196,7 +170,6 @@ select:focus {
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Form Element Base Styles */
 input,
 textarea,
 select {
@@ -217,7 +190,6 @@ select {
     min-height: 40px !important;
 }
 
-/* Specific input type styling */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -295,14 +267,12 @@ select:focus {
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Input placeholder styles */
 input::placeholder,
 textarea::placeholder {
     color: var(--text-tertiary);
     opacity: 1;
 }
 
-/* Disabled form elements */
 input:disabled,
 textarea:disabled,
 select:disabled {
@@ -312,7 +282,6 @@ select:disabled {
     opacity: 0.6;
 }
 
-/* Form validation styles */
 input:invalid,
 textarea:invalid,
 select:invalid {
@@ -325,14 +294,12 @@ select:valid {
     border-color: var(--success);
 }
 
-/* Required field indicator */
 input:required,
 textarea:required,
 select:required {
     border-left: 3px solid var(--primary-color);
 }
 
-/* Form group styling */
 .form-group {
     margin-bottom: var(--space-md);
 }
@@ -350,7 +317,6 @@ select:required {
     width: 100%;
 }
 
-/* Form row styling for inline elements */
 .form-row {
     display: flex;
     gap: var(--space-md);
@@ -362,7 +328,6 @@ select:required {
     margin-bottom: 0;
 }
 
-/* Control Group Styling (for header controls) */
 .control-group {
     display: flex;
     align-items: center;
@@ -399,12 +364,10 @@ select:required {
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Specific styling for date inputs in header */
 .header-controls input[type="date"] {
     min-width: 140px;
 }
 
-/* Button focus styles */
 button:focus,
 .control-btn:focus {
     outline: 2px solid var(--primary-color) !important;
@@ -412,7 +375,6 @@ button:focus,
     box-shadow: var(--card-shadow-focus) !important;
 }
 
-/* Skip Link for Screen Readers */
 .skip-link {
     position: absolute;
     top: -40px;
@@ -429,7 +391,6 @@ button:focus,
     top: 6px;
 }
 
-/* Layout Components */
 .sidebar { 
     position: fixed; 
     top: 0; 
@@ -451,7 +412,7 @@ button:focus,
 .nav-menu { display: flex; flex-direction: column; gap: 8px; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--border-radius); color: var(--text-primary); text-decoration: none; transition: background .2s ease, color .2s ease; }
 .nav-item.active, .nav-item:hover { background: var(--primary-light); color: var(--primary-color); }
-/* Main Content Area */
+
 .main-content { 
     margin-left: 260px; 
     padding: var(--space-lg);
@@ -459,7 +420,6 @@ button:focus,
     transition: margin-left var(--transition-normal);
 }
 
-/* Header Components */
 .header { 
     display: flex; 
     align-items: center; 
@@ -494,7 +454,6 @@ button:focus,
     flex-wrap: wrap;
 }
 
-/* Navigation Components */
 .logo { 
     margin-bottom: var(--space-lg);
     text-align: center;
@@ -539,7 +498,6 @@ button:focus,
     border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
 }
 
-/* Card Components */
 .transfer-cards { 
     display: grid; 
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
@@ -622,7 +580,6 @@ button:focus,
     line-height: var(--line-height-tight);
 }
 
-/* Control Components */
 .control-card { 
     background: var(--white); 
     border-radius: var(--border-radius); 
@@ -687,7 +644,6 @@ button:focus,
     transform: none;
 }
 
-/* Button Variants */
 .control-btn.muted { 
     background: var(--gray-200); 
     color: var(--text-primary); 
@@ -730,7 +686,79 @@ button:focus,
     background: var(--warning-dark);
 }
 
-/* Responsive Design */
+.alert-card {
+    transition: all 0.3s ease;
+    animation: slideIn 0.3s ease-out;
+}
+
+.alert-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.alert-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.alert-container::-webkit-scrollbar-track {
+    background: var(--gray-light);
+    border-radius: 4px;
+}
+
+.alert-container::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 4px;
+}
+
+.alert-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+.filter-btn {
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.filter-btn.active {
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.alert-critical {
+    border-left-color: var(--danger) !important;
+    background: var(--danger-light) !important;
+}
+
+.alert-warning {
+    border-left-color: var(--warning) !important;
+    background: var(--warning-light) !important;
+}
+
+.alert-info {
+    border-left-color: var(--info) !important;
+    background: var(--info-light) !important;
+}
+
+.alert-normal {
+    border-left-color: var(--success) !important;
+    background: var(--success-light) !important;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
@@ -796,7 +824,6 @@ button:focus,
     }
 }
 
-/* Mobile Menu Toggle */
 .mobile-menu-toggle {
     display: none;
     position: fixed;
@@ -818,7 +845,6 @@ button:focus,
     }
 }
 
-/* Loading States */
 .loading {
     position: relative;
     overflow: hidden;
@@ -840,7 +866,6 @@ button:focus,
     100% { left: 100%; }
 }
 
-/* Error States */
 .error-state {
     background: var(--danger-light);
     border-color: var(--danger);
@@ -852,7 +877,6 @@ button:focus,
     color: var(--white);
 }
 
-/* Success States */
 .success-state {
     background: var(--success-light);
     border-color: var(--success);
@@ -864,7 +888,6 @@ button:focus,
     color: var(--white);
 }
 
-/* Warning States */
 .warning-state {
     background: var(--warning-light);
     border-color: var(--warning);
@@ -889,7 +912,6 @@ button:focus,
 .control-btn:hover { background: var(--primary-dark); }
 .control-btn:active { transform: translateY(1px); }
 
-/* Button variants (optional utility classes) */
 .control-btn.muted { background: var(--gray-200); color: var(--text-primary); }
 .control-btn.secondary { background: var(--gray-300); color: var(--white); }
 .control-btn.danger { background: var(--danger); }
@@ -900,7 +922,6 @@ button:focus,
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-color { width: 16px; height: 16px; border-radius: 4px; }
 
-/* Chart Styles */
 .chart-container {
     background: var(--white);
     border-radius: var(--border-radius);
@@ -924,7 +945,6 @@ button:focus,
     font-style: italic;
 }
 
-/* Time Filter Buttons */
 .time-filter-controls {
     display: flex;
     gap: 4px;
@@ -960,7 +980,6 @@ button:focus,
     background: var(--primary-dark);
 }
 
-/* Chart Responsive Design */
 @media (max-width: 1200px) {
     .chart-container {
         min-height: 150px;
@@ -996,7 +1015,6 @@ button:focus,
     border: 1px solid var(--gray-200);
 }
 
-/* Activity Table Styles (matching admin activity log) */
 .activity-table {
     width: 100%;
     border-collapse: collapse;
@@ -1061,7 +1079,6 @@ button:focus,
     overflow-x: auto;
 }
 
-/* Inputs */
 input[type="text"], input[type="password"], input[type="email"], input[type="date"], select {
     background: var(--white);
     border: 1px solid var(--gray-300);
@@ -1071,20 +1088,16 @@ input[type="text"], input[type="password"], input[type="email"], input[type="dat
 }
 input:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(24,119,242,.18); }
 
-/* Subtle typography accents */
 .greeting { color: var(--text-secondary); margin: 0; }
 .welcome-title { color: var(--text-primary); }
 
-/* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--gray-100); }
 ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-medium); }
 
-/* Pills / badges */
 .pill { display:inline-block; padding:6px 10px; border-radius:999px; background:var(--primary-light); color:var(--primary-color); font-size:12px; }
 
-/* Prevent layout shifts during loading */
 .card-amount {
     min-height: 1.5em;
     display: flex;
@@ -1092,11 +1105,8 @@ input:focus, select:focus { outline: none; border-color: var(--primary-color); b
     justify-content: center;
 }
 
-/* Loading state */
 .loading {
     opacity: 0.7;
     pointer-events: none;
 }
-
-
 

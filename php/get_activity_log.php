@@ -1,8 +1,4 @@
 <?php
-/**
- * Get Activity Log
- * Retrieves activity logs with filtering and pagination
- */
 
 require_once __DIR__ . '/db.php';
 
@@ -16,7 +12,6 @@ class ActivityLogManager {
     
     public function getActivities($filters = []) {
         try {
-            // Build the base query - only show admin-side activities
             $query = "
                 SELECT 
                     al.id,
@@ -29,22 +24,15 @@ class ActivityLogManager {
                 LEFT JOIN users u ON al.user_id = u.id
                 WHERE 1=1
                 AND (
+                    -- Only admin actions
                     al.action IN ('login', 'logout', 'admin_action', 'system')
-                    OR u.role = 'super_user'
-                    OR al.description LIKE '%admin%'
-                    OR al.description LIKE '%Created new user%'
-                    OR al.description LIKE '%Updated user%'
-                    OR al.description LIKE '%Deleted user%'
-                    OR al.description LIKE '%Created new farm%'
-                    OR al.description LIKE '%Updated farm%'
-                    OR al.description LIKE '%Deleted farm%'
-                    OR al.description LIKE '%device management%'
+                    -- Only admin users (super_user or admin username)
+                    AND (u.role = 'super_user' OR u.username = 'admin' OR u.username IS NULL)
                 )
             ";
             
             $params = [];
             
-            // Apply filters
             if (!empty($filters['action'])) {
                 $query .= " AND al.action = ?";
                 $params[] = $filters['action'];
@@ -68,19 +56,12 @@ class ActivityLogManager {
                 $params[] = $searchTerm;
             }
             
-            // Get total count for pagination - only admin-side activities
             $countQuery = "SELECT COUNT(*) as total FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE 1=1
                 AND (
+                    -- Only admin actions
                     al.action IN ('login', 'logout', 'admin_action', 'system')
-                    OR u.role = 'super_user'
-                    OR al.description LIKE '%admin%'
-                    OR al.description LIKE '%Created new user%'
-                    OR al.description LIKE '%Updated user%'
-                    OR al.description LIKE '%Deleted user%'
-                    OR al.description LIKE '%Created new farm%'
-                    OR al.description LIKE '%Updated farm%'
-                    OR al.description LIKE '%Deleted farm%'
-                    OR al.description LIKE '%device management%'
+                    -- Only admin users (super_user or admin username)
+                    AND (u.role = 'super_user' OR u.username = 'admin' OR u.username IS NULL)
                 )";
             $countParams = [];
             
@@ -111,17 +92,14 @@ class ActivityLogManager {
             $countStmt->execute($countParams);
             $totalItems = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
             
-            // Calculate pagination
             $currentPage = isset($filters['page']) ? (int)$filters['page'] : 1;
             $totalPages = ceil($totalItems / $this->itemsPerPage);
             $offset = ($currentPage - 1) * $this->itemsPerPage;
             
-            // Add ordering and pagination to main query
             $query .= " ORDER BY al.created_at DESC LIMIT ? OFFSET ?";
             $params[] = $this->itemsPerPage;
             $params[] = $offset;
             
-            // Execute main query
             $stmt = $this->db->prepare($query);
             $stmt->execute($params);
             $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -146,7 +124,6 @@ class ActivityLogManager {
     }
 }
 
-// Handle the request
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     header('Content-Type: application/json');
     

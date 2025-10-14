@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 08, 2025 at 09:31 AM
+-- Generation Time: Oct 14, 2025 at 08:45 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -37,6 +37,52 @@ CREATE TABLE `activity_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`id`, `user_id`, `action`, `description`, `ip_address`, `severity`, `created_at`) VALUES
+(428, 1, 'login', 'Admin user \'admin\' logged in', 'unknown', 'low', '2025-10-13 17:01:40'),
+(429, 1, 'logout', 'Admin user \'admin\' logged out', 'unknown', 'low', '2025-10-13 17:01:40'),
+(430, 1, 'login', 'Admin user \'admin\' logged in', 'unknown', 'low', '2025-10-13 17:05:20'),
+(431, 1, 'logout', 'Admin user \'admin\' logged out', 'unknown', 'low', '2025-10-13 17:05:20'),
+(432, 2, 'login', 'Admin user \'Godwin\' logged in', '::1', 'low', '2025-10-14 03:56:14'),
+(433, 2, 'logout', 'Admin user \'Godwin\' logged out', '::1', 'low', '2025-10-14 06:16:45'),
+(434, 1, 'login', 'Admin user \'admin\' logged in', '::1', 'low', '2025-10-14 06:16:53'),
+(435, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:16:58'),
+(436, 1, 'logout', 'Admin user \'admin\' logged out', '::1', 'low', '2025-10-14 06:19:41'),
+(437, 2, 'login', 'Admin user \'Godwin\' logged in', '::1', 'low', '2025-10-14 06:19:48'),
+(438, 2, 'logout', 'Admin user \'Godwin\' logged out', '::1', 'low', '2025-10-14 06:30:14'),
+(439, 1, 'login', 'Admin user \'admin\' logged in', '::1', 'low', '2025-10-14 06:30:19'),
+(440, 1, 'admin_action', 'Created new user \'user\' (ID: 3)', '::1', 'low', '2025-10-14 06:31:20'),
+(441, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:31:29'),
+(442, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:31:34'),
+(443, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:31:39'),
+(444, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:31:44'),
+(445, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:31:49'),
+(446, 1, 'logout', 'Admin user \'admin\' logged out', '::1', 'low', '2025-10-14 06:31:51'),
+(447, NULL, 'login', 'Admin user \'user\' logged in', '::1', 'low', '2025-10-14 06:31:57'),
+(448, NULL, 'logout', 'Admin user \'user\' logged out', '::1', 'low', '2025-10-14 06:42:37'),
+(449, 1, 'login', 'Admin user \'admin\' logged in', '::1', 'low', '2025-10-14 06:42:46'),
+(450, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:42:51'),
+(451, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:42:56'),
+(452, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:02'),
+(453, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:07'),
+(454, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:12'),
+(455, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:17'),
+(456, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:22'),
+(457, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:27'),
+(458, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:32'),
+(459, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:37'),
+(460, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:42'),
+(461, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:47'),
+(462, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:52'),
+(463, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:43:57'),
+(464, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:44:17'),
+(465, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:44:21'),
+(466, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:44:27'),
+(467, NULL, 'admin_action', 'Admin manually checked all devices for status and component health', '::1', 'low', '2025-10-14 06:44:32');
+
 -- --------------------------------------------------------
 
 --
@@ -69,7 +115,7 @@ CREATE TABLE `devices` (
 --
 
 INSERT INTO `devices` (`id`, `user_id`, `farm_id`, `device_name`, `device_code`, `device_type`, `ip_address`, `status`, `last_seen`, `temp_humidity_sensor`, `ammonia_sensor`, `thermal_camera`, `sd_card_module`, `rtc_module`, `arduino_timestamp`, `component_last_checked`, `created_at`, `updated_at`) VALUES
-(1, NULL, NULL, 'SWIFT-001', 'SW001', 'sensor', '192.168.1.16', 'up', '2025-10-08 15:29:53', 'offline', 'offline', 'offline', 'offline', 'active', 'active', '2025-10-08 15:29:53', '2025-10-07 17:12:39', '2025-10-08 07:29:53');
+(3, 2, NULL, 'SWIFT Water Sprinkler Device .11', NULL, 'sensor', '192.168.1.11', 'up', '2025-10-14 14:45:30', 'active', 'active', 'offline', 'offline', 'offline', 'active', '2025-10-14 14:45:30', '2025-10-11 04:30:42', '2025-10-14 06:45:30');
 
 -- --------------------------------------------------------
 
@@ -238,13 +284,13 @@ ALTER TABLE `user_profiles`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=125;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=468;
 
 --
 -- AUTO_INCREMENT for table `devices`
 --
 ALTER TABLE `devices`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `farms`
@@ -262,7 +308,7 @@ ALTER TABLE `system_settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `user_profiles`

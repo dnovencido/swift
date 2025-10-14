@@ -1,35 +1,38 @@
 /**
- * SWIFT Live Charts Manager
- * Handles real-time line graphs for sensor data
+ * SWIFT IoT System - live-charts.js
+ * 
+ * This file contains JavaScript functionality for the SWIFT IoT Smart Swine Farming System.
+ * It handles user interface interactions, data visualization, and system control.
+ * 
+ * Features:
+ * - Real-time data updates and visualization
+ * - User interface interactions and controls
+ * - Chart and graph rendering
+ * - API communication and data handling
+ * - Error handling and user feedback
  */
 
 class LiveChartsManager {
     constructor() {
         this.charts = {};
-        this.currentFilter = 'minute'; // Match the HTML default
+        this.currentFilter = 'minute'; 
         this.updateInterval = null;
         this.isInitialized = false;
-        
         this.init();
     }
-    
     init() {
         this.setupTimeFilterControls();
         this.initializeCharts();
         this.startLiveUpdates();
         this.isInitialized = true;
     }
-    
     setupTimeFilterControls() {
-        // Wait a bit to ensure DOM is fully ready
         setTimeout(() => {
             const filterButtons = document.querySelectorAll('.time-filter-btn');
-            
             if (filterButtons.length === 0) {
                 console.error('No filter buttons found!');
                 return;
             }
-            
             filterButtons.forEach((btn, index) => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -40,13 +43,10 @@ class LiveChartsManager {
             });
         }, 100);
     }
-    
     changeTimeFilter(filter) {
         if (filter === this.currentFilter) {
             return;
         }
-        
-        // Update active button
         document.querySelectorAll('.time-filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
@@ -54,57 +54,47 @@ class LiveChartsManager {
         if (activeBtn) {
             activeBtn.classList.add('active');
         }
-        
         this.currentFilter = filter;
-        
-        // Update all charts with new filter
         this.updateAllCharts();
     }
-    
     initializeCharts() {
-        // Temperature Chart
         this.charts.temperature = this.createChart('temperatureChart', {
             label: 'Temperature (°C)',
             color: '#ff6b6b',
             backgroundColor: 'rgba(255, 107, 107, 0.1)'
         });
-        
-        // Humidity Chart
         this.charts.humidity = this.createChart('humidityChart', {
             label: 'Humidity (%)',
             color: '#4ecdc4',
             backgroundColor: 'rgba(78, 205, 196, 0.1)'
         });
-        
-        // Ammonia Chart
         this.charts.ammonia = this.createChart('ammoniaChart', {
             label: 'Ammonia (ppm)',
             color: '#45b7d1',
             backgroundColor: 'rgba(69, 183, 209, 0.1)'
         });
-        
-        // Load initial data
         this.updateAllCharts();
     }
-    
     createChart(canvasId, config) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             console.error(`Canvas element not found: ${canvasId}`);
             return null;
         }
-        
         const ctx = canvas.getContext('2d');
-        
         if (typeof Chart === 'undefined') {
             console.error('Chart.js is not loaded!');
+            // Try to wait a bit and retry
+            setTimeout(() => {
+                if (typeof Chart !== 'undefined') {
+                    console.log('Chart.js loaded, retrying chart creation...');
+                    this.createChart(canvasId, config);
+                }
+            }, 1000);
             return null;
         }
-        
-        // Get scale values before creating chart
         const maxValue = this.getMaxValue(config.label);
         const stepSize = this.getStepSize(config.label);
-        
         return new Chart(ctx, {
             type: 'line',
             data: {
@@ -133,7 +123,7 @@ class LiveChartsManager {
                 },
                 plugins: {
                     legend: {
-                        display: false // Hide legend since we have individual chart titles
+                        display: false 
                     },
                     tooltip: {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -208,124 +198,104 @@ class LiveChartsManager {
             }
         });
     }
-    
     getMaxValue(label) {
-        // Set specific maximum values for each sensor type
         if (label.includes('Temperature')) {
-            return 50; // 0-50°C for temperature
+            return 50; 
         } else if (label.includes('Humidity')) {
-            return 100; // 0-100% for humidity
+            return 100; 
         } else if (label.includes('Ammonia')) {
-            return 150; // 0-150 ppm for ammonia
+            return 150; 
         }
-        return 100; // Default fallback
+        return 100; 
     }
-    
     getStepSize(label) {
-        // Set step sizes of 5 for all sensor types
         if (label.includes('Temperature')) {
-            return 5; // 5°C steps (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50)
+            return 5; 
         } else if (label.includes('Humidity')) {
-            return 5; // 5% steps (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100)
+            return 5; 
         } else if (label.includes('Ammonia')) {
-            return 5; // 5 ppm steps (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150)
+            return 5; 
         }
-        return 5; // Default fallback
+        return 5; 
     }
-    
-    
-    
-    
-    
     async updateAllCharts() {
         try {
             this.updateChartStatus('Loading...', '#666');
-            
             const response = await fetch(`../php/get_historical_data.php?filter=${this.currentFilter}&limit=50`);
             const result = await response.json();
-            
             if (result.status === 'success' && result.chart_data) {
                 this.updateChartsWithData(result.chart_data);
                 this.updateChartStatus(`Loaded ${result.data_points} data points`, '#28a745');
             } else {
                 this.updateChartStatus('No data available', '#ffc107');
             }
-            
         } catch (error) {
             console.error('Error updating charts:', error);
             this.updateChartStatus('Error loading data', '#f02849');
         }
     }
-    
     updateChartsWithData(chartData) {
-        // Update each chart with the corresponding data
+        if (!chartData || !chartData.datasets || !chartData.labels) {
+            console.warn('Invalid chart data received:', chartData);
+            return;
+        }
+        
         Object.keys(this.charts).forEach(sensorType => {
             const chart = this.charts[sensorType];
-            const datasetIndex = this.getDatasetIndex(sensorType);
+            if (!chart || !chart.data) {
+                console.warn(`Chart not initialized for ${sensorType}`);
+                return;
+            }
             
+            const datasetIndex = this.getDatasetIndex(sensorType);
             if (datasetIndex !== -1 && chartData.datasets[datasetIndex]) {
                 chart.data.labels = chartData.labels;
                 chart.data.datasets[0].data = chartData.datasets[datasetIndex].data;
-                chart.update('none'); // Update without animation for better performance
+                chart.update('none'); 
             }
         });
     }
-    
     getDatasetIndex(sensorType) {
         const mapping = {
             'temperature': 0,
             'humidity': 1,
             'ammonia': 2
         };
-        
-        // Try exact match first
         let index = mapping[sensorType];
-        
-        // If not found, try case-insensitive match
         if (index === undefined) {
             const lowerSensorType = sensorType.toLowerCase();
             index = mapping[lowerSensorType];
         }
-        
-        // If still not found, try partial match
         if (index === undefined) {
             if (sensorType.includes('temp') || sensorType.includes('Temp')) {
-                index = 0; // Temperature
+                index = 0; 
             } else if (sensorType.includes('hum') || sensorType.includes('Hum')) {
-                index = 1; // Humidity
+                index = 1; 
             } else if (sensorType.includes('amm') || sensorType.includes('Amm')) {
-                index = 2; // Ammonia
+                index = 2; 
             }
         }
-        
         return index !== undefined ? index : -1;
     }
-    
     updateChartStatus(message, color = '#666') {
         document.querySelectorAll('.chart-status').forEach(status => {
             status.textContent = message;
             status.style.color = color;
         });
     }
-    
     startLiveUpdates() {
-        // Update charts every 30 seconds for live data
         this.updateInterval = setInterval(() => {
             if (this.isInitialized) {
                 this.updateAllCharts();
             }
-        }, 30000); // 30 seconds - charts don't need frequent updates
-        
-        // Also update when page becomes visible
+        }, 30000); 
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && this.isInitialized) {
                 this.updateAllCharts();
             }
         });
-        
         console.log('Live charts updates started (30s interval)');
     }
-    
     stopLiveUpdates() {
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
@@ -333,7 +303,6 @@ class LiveChartsManager {
             console.log('Live charts updates stopped');
         }
     }
-    
     destroy() {
         this.stopLiveUpdates();
         Object.values(this.charts).forEach(chart => {
@@ -343,30 +312,10 @@ class LiveChartsManager {
         this.isInitialized = false;
     }
 }
-
-// Auto-initialize when DOM is loaded
 let liveChartsManager = null;
-
-// Charts will be initialized by the dashboard to avoid conflicts
-// document.addEventListener('DOMContentLoaded', () => {
-//     // Only initialize if we're on the dashboard page
-//     if (document.getElementById('temperatureChart')) {
-//         liveChartsManager = new LiveChartsManager();
-//         
-//         // Export for manual access
-//         window.SWIFT_CHARTS = {
-//             getManager: () => liveChartsManager,
-//             updateCharts: () => liveChartsManager ? liveChartsManager.updateAllCharts() : null,
-//             changeFilter: (filter) => liveChartsManager ? liveChartsManager.changeTimeFilter(filter) : null
-//         };
-//     }
-// });
-
-// Cleanup when page unloads
 window.addEventListener('beforeunload', () => {
     if (liveChartsManager) {
         liveChartsManager.destroy();
     }
 });
-
 console.log('SWIFT Live Charts Manager loaded');

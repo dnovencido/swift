@@ -1,14 +1,11 @@
 <?php
-// Device Schedules API - Handles CRUD operations for device schedules
-// File: php/api/v1/schedules.php
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
@@ -16,14 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../../config.php';
 require_once '../../db.php';
 
-// Initialize response
 $response = ['success' => false, 'message' => '', 'data' => null];
 
 try {
-    // Get database connection
     $pdo = DatabaseConnectionProvider::client();
     
-    // Debug: Log successful connection
     error_log('Schedules API: Database connection established');
     
     $method = $_SERVER['REQUEST_METHOD'];
@@ -31,7 +25,6 @@ try {
     
     switch ($method) {
         case 'GET':
-            // Fetch all schedules
             $schedules = fetchSchedules($pdo);
             $response['success'] = true;
             $response['data'] = $schedules;
@@ -39,7 +32,6 @@ try {
             break;
             
         case 'POST':
-            // Create new schedule
             if (validateScheduleData($input)) {
                 $scheduleId = createSchedule($pdo, $input);
                 $response['success'] = true;
@@ -51,7 +43,6 @@ try {
             break;
             
         case 'PUT':
-            // Update existing schedule
             if (isset($input['id']) && validateScheduleData($input)) {
                 $updated = updateSchedule($pdo, $input['id'], $input);
                 if ($updated) {
@@ -66,13 +57,12 @@ try {
             break;
             
         case 'DELETE':
-            // Delete schedule
             if (isset($input['id'])) {
                 $scheduleId = $input['id'];
                 error_log("Delete request for schedule ID: " . $scheduleId);
                 
                 $softDelete = isset($input['soft_delete']) && $input['soft_delete'] === true;
-                $deleted = deleteSchedule($pdo, $scheduleId, !$softDelete); // Default to hard delete
+                $deleted = deleteSchedule($pdo, $scheduleId, !$softDelete);
                 
                 error_log("Delete result: " . ($deleted ? 'success' : 'failed'));
                 
@@ -88,7 +78,6 @@ try {
             break;
             
         case 'RESTORE':
-            // Restore soft-deleted schedule
             if (isset($input['id'])) {
                 $restored = restoreSchedule($pdo, $input['id']);
                 if ($restored) {
@@ -116,9 +105,7 @@ try {
 
 echo json_encode($response);
 
-// Function to fetch all schedules
 function fetchSchedules($pdo) {
-    // Check if table exists first
     $tableCheck = $pdo->query("SHOW TABLES LIKE 'device_schedules'");
     if ($tableCheck->rowCount() == 0) {
         error_log('Schedules API: device_schedules table does not exist');
@@ -133,6 +120,7 @@ function fetchSchedules($pdo) {
                 schedule_time,
                 repeat_type,
                 custom_days,
+                duration_minutes,
                 is_active,
                 last_executed,
                 execution_count,
@@ -146,7 +134,6 @@ function fetchSchedules($pdo) {
     $stmt->execute();
     $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Process custom_days JSON
     foreach ($schedules as &$schedule) {
         if ($schedule['custom_days']) {
             $schedule['custom_days'] = json_decode($schedule['custom_days'], true);
@@ -158,12 +145,11 @@ function fetchSchedules($pdo) {
     return $schedules;
 }
 
-// Function to create a new schedule
 function createSchedule($pdo, $data) {
     
     $sql = "INSERT INTO device_schedules 
-            (device_type, schedule_name, schedule_date, schedule_time, repeat_type, custom_days, device_id) 
-            VALUES (:device_type, :schedule_name, :schedule_date, :schedule_time, :repeat_type, :custom_days, :device_id)";
+            (device_type, schedule_name, schedule_date, schedule_time, repeat_type, custom_days, duration_minutes, device_id) 
+            VALUES (:device_type, :schedule_name, :schedule_date, :schedule_time, :repeat_type, :custom_days, :duration_minutes, :device_id)";
     
     $stmt = $pdo->prepare($sql);
     
@@ -179,13 +165,13 @@ function createSchedule($pdo, $data) {
         ':schedule_time' => $data['schedule_time'],
         ':repeat_type' => $data['repeat_type'],
         ':custom_days' => $customDaysJson,
-        ':device_id' => 1 // Default device ID, can be made dynamic later
+        ':duration_minutes' => $data['duration_minutes'] ?? 30,
+        ':device_id' => 1
     ]);
     
     return $pdo->lastInsertId();
 }
 
-// Function to update an existing schedule
 function updateSchedule($pdo, $id, $data) {
     
     $sql = "UPDATE device_schedules 
@@ -195,6 +181,7 @@ function updateSchedule($pdo, $id, $data) {
                 schedule_time = :schedule_time,
                 repeat_type = :repeat_type,
                 custom_days = :custom_days,
+                duration_minutes = :duration_minutes,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id";
     
@@ -212,25 +199,23 @@ function updateSchedule($pdo, $id, $data) {
         ':schedule_date' => $data['schedule_date'],
         ':schedule_time' => $data['schedule_time'],
         ':repeat_type' => $data['repeat_type'],
-        ':custom_days' => $customDaysJson
+        ':custom_days' => $customDaysJson,
+        ':duration_minutes' => $data['duration_minutes'] ?? 30
     ]);
     
     return $stmt->rowCount() > 0;
 }
 
-// Function to delete a schedule
 function deleteSchedule($pdo, $id, $hardDelete = true) {
     try {
         error_log("deleteSchedule called with ID: $id, hardDelete: " . ($hardDelete ? 'true' : 'false'));
         
         if ($hardDelete) {
-            // Hard delete - permanently remove from database (DEFAULT)
             $sql = "DELETE FROM device_schedules WHERE id = :id";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([':id' => $id]);
             error_log("Hard delete executed, rows affected: " . $stmt->rowCount());
         } else {
-            // Soft delete - mark as inactive (optional)
             $sql = "UPDATE device_schedules SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([':id' => $id]);
@@ -246,7 +231,6 @@ function deleteSchedule($pdo, $id, $hardDelete = true) {
     }
 }
 
-// Function to restore a soft-deleted schedule
 function restoreSchedule($pdo, $id) {
     try {
         $sql = "UPDATE device_schedules SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
@@ -260,7 +244,6 @@ function restoreSchedule($pdo, $id) {
     }
 }
 
-// Function to validate schedule data
 function validateScheduleData($data) {
     $required = ['device_type', 'schedule_date', 'schedule_time', 'repeat_type'];
     
@@ -270,17 +253,14 @@ function validateScheduleData($data) {
         }
     }
     
-    // Validate device_type
     if (!in_array($data['device_type'], ['sprinkler', 'heat_bulb'])) {
         return false;
     }
     
-    // Validate repeat_type
     if (!in_array($data['repeat_type'], ['once', 'daily', 'weekdays', 'weekends', 'custom'])) {
         return false;
     }
     
-    // Validate custom_days for custom repeat type
     if ($data['repeat_type'] === 'custom') {
         if (empty($data['custom_days']) || !is_array($data['custom_days'])) {
             return false;

@@ -19,13 +19,11 @@ try {
 
     $pdo = DatabaseConnectionProvider::client();
     
-    // Check if weekly report exists in database
     $stmt = $pdo->prepare('SELECT * FROM weekly_report WHERE week_start = ? AND week_end = ? LIMIT 1');
     $stmt->execute([$weekStart, $weekEnd]);
     $row = $stmt->fetch();
     
     if ($row) {
-        // Use pre-computed weekly report
         $data = [
             'weekStart' => $weekStart,
             'weekEnd' => $weekEnd,
@@ -47,10 +45,23 @@ try {
             'totalAlerts' => (int)($row['total_alerts'] ?? 0),
             'pumpTotalTime' => (int)($row['pump_total_time'] ?? 0),
             'heatTotalTime' => (int)($row['heat_total_time'] ?? 0),
-            'dailyData' => getDailyBreakdown($pdo, $weekStart, $weekEnd)
+            'controls' => [
+                'pump_on_time' => (int)($row['pump_total_time'] ?? 0),
+                'heat_on_time' => (int)($row['heat_total_time'] ?? 0),
+                'pump_triggers' => (int)($row['pump_triggers'] ?? 0),
+                'heat_triggers' => (int)($row['heat_triggers'] ?? 0)
+            ],
+            'alerts' => [
+                'temperature' => (int)($row['temp_alerts'] ?? 0),
+                'humidity' => (int)($row['humidity_alerts'] ?? 0),
+                'ammonia' => (int)($row['ammonia_alerts'] ?? 0),
+                'total' => (int)($row['total_alerts'] ?? 0)
+            ],
+            'dailyData' => getDailyBreakdown($pdo, $weekStart, $weekEnd),
+            'daily_breakdown' => getDailyBreakdown($pdo, $weekStart, $weekEnd),
+            'alerts' => getAlertsForWeek($pdo, $weekStart, $weekEnd)
         ];
     } else {
-        // Compute weekly report from raw data
         $data = computeWeeklyFromRaw($pdo, $weekStart, $weekEnd);
     }
     
@@ -62,7 +73,6 @@ try {
 }
 
 function computeWeeklyFromRaw(PDO $pdo, string $weekStart, string $weekEnd): array {
-    // Get weekly aggregates from raw data
     $stmt = $pdo->prepare('
         SELECT 
             MIN(temperature) as temp_min,
@@ -81,10 +91,9 @@ function computeWeeklyFromRaw(PDO $pdo, string $weekStart, string $weekEnd): arr
     $stmt->execute([$weekStart, $weekEnd]);
     $row = $stmt->fetch();
     
-    // Get pump and heat total times
     $stmt = $pdo->prepare('
         SELECT 
-            SUM(CASE WHEN pump_temp = "ON" THEN 1 ELSE 0 END) as pump_minutes,
+            SUM(CASE WHEN water_sprinkler = "ON" THEN 1 ELSE 0 END) as pump_minutes,
             SUM(CASE WHEN heat = "ON" THEN 1 ELSE 0 END) as heat_minutes
         FROM raw_sensor_data 
         WHERE DATE(timestamp) BETWEEN ? AND ?
@@ -92,15 +101,52 @@ function computeWeeklyFromRaw(PDO $pdo, string $weekStart, string $weekEnd): arr
     $stmt->execute([$weekStart, $weekEnd]);
     $controlRow = $stmt->fetch();
     
-    // Count alerts (temperature > 35, ammonia > 3.5, humidity > 90)
     $stmt = $pdo->prepare('
-        SELECT COUNT(*) as alert_count
-        FROM raw_sensor_data 
-        WHERE DATE(timestamp) BETWEEN ? AND ?
-        AND (temperature > 35 OR ammonia > 3.5 OR humidity > 90)
+        SELECT 
+            COUNT(*) as pump_triggers
+        FROM (
+            SELECT 1 FROM raw_sensor_data 
+            WHERE DATE(timestamp) BETWEEN ? AND ? AND water_sprinkler = "ON"
+            GROUP BY DATE(timestamp), HOUR(timestamp)
+        ) as pump_groups
     ');
     $stmt->execute([$weekStart, $weekEnd]);
-    $alertRow = $stmt->fetch();
+    $pumpTriggers = $stmt->fetch()['pump_triggers'] ?? 0;
+    
+    $stmt = $pdo->prepare('
+        SELECT 
+            COUNT(*) as heat_triggers
+        FROM (
+            SELECT 1 FROM raw_sensor_data 
+            WHERE DATE(timestamp) BETWEEN ? AND ? AND heat = "ON"
+            GROUP BY DATE(timestamp), HOUR(timestamp)
+        ) as heat_groups
+    ');
+    $stmt->execute([$weekStart, $weekEnd]);
+    $heatTriggers = $stmt->fetch()['heat_triggers'] ?? 0;
+    
+    $alerts = getAlertsForWeek($pdo, $weekStart, $weekEnd);
+    
+    $alertCounts = [
+        'temperature' => 0,
+        'humidity' => 0,
+        'ammonia' => 0,
+        'total' => count($alerts)
+    ];
+    
+    foreach ($alerts as $alert) {
+        switch ($alert['type']) {
+            case 'temperature':
+                $alertCounts['temperature']++;
+                break;
+            case 'humidity':
+                $alertCounts['humidity']++;
+                break;
+            case 'ammonia':
+                $alertCounts['ammonia']++;
+                break;
+        }
+    }
     
     return [
         'weekStart' => $weekStart,
@@ -120,11 +166,20 @@ function computeWeeklyFromRaw(PDO $pdo, string $weekStart, string $weekEnd): arr
             'max' => round((float)$row['ammonia_max'], 2),
             'avg' => round((float)$row['ammonia_avg'], 2)
         ],
-        'totalAlerts' => (int)($alertRow['alert_count'] ?? 0),
+        'totalAlerts' => $alertCounts['total'],
         'pumpTotalTime' => (int)($controlRow['pump_minutes'] ?? 0),
         'heatTotalTime' => (int)($controlRow['heat_minutes'] ?? 0),
+        'controls' => [
+            'pump_on_time' => (int)($controlRow['pump_minutes'] ?? 0),
+            'heat_on_time' => (int)($controlRow['heat_minutes'] ?? 0),
+            'pump_triggers' => (int)$pumpTriggers,
+            'heat_triggers' => (int)$heatTriggers
+        ],
+        'alerts' => $alertCounts,
         'dataPoints' => (int)($row['data_points'] ?? 0),
-        'dailyData' => getDailyBreakdown($pdo, $weekStart, $weekEnd)
+        'dailyData' => getDailyBreakdown($pdo, $weekStart, $weekEnd),
+        'daily_breakdown' => getDailyBreakdown($pdo, $weekStart, $weekEnd),
+        'individual_alerts' => $alerts
     ];
 }
 
@@ -141,9 +196,9 @@ function getDailyBreakdown(PDO $pdo, string $weekStart, string $weekEnd): array 
             MIN(ammonia) as ammonia_min,
             MAX(ammonia) as ammonia_max,
             AVG(ammonia) as ammonia_avg,
-            SUM(CASE WHEN pump_temp = "ON" THEN 1 ELSE 0 END) as pump_minutes,
+            SUM(CASE WHEN water_sprinkler = "ON" THEN 1 ELSE 0 END) as pump_minutes,
             SUM(CASE WHEN heat = "ON" THEN 1 ELSE 0 END) as heat_minutes,
-            SUM(CASE WHEN temperature > 35 OR ammonia > 3.5 OR humidity > 90 THEN 1 ELSE 0 END) as alerts
+            SUM(CASE WHEN temperature > 30 OR ammonia > 50 OR humidity > 80 THEN 1 ELSE 0 END) as alerts
         FROM raw_sensor_data 
         WHERE DATE(timestamp) BETWEEN ? AND ?
         GROUP BY DATE(timestamp)
@@ -178,5 +233,46 @@ function getDailyBreakdown(PDO $pdo, string $weekStart, string $weekEnd): array 
     }
     
     return $dailyData;
+}
+
+function getAlertsForWeek(PDO $pdo, string $weekStart, string $weekEnd): array {
+    try {
+        $stmt = $pdo->prepare('
+            SELECT 
+                id, alert_type, alert_category, severity, parameter_name, current_value, 
+                threshold_value, threshold_type, alert_message, alert_description, 
+                trigger_reason, device_response, status, alert_timestamp, created_at
+            FROM alerts 
+            WHERE DATE(alert_timestamp) BETWEEN ? AND ?
+            ORDER BY alert_timestamp DESC
+        ');
+        $stmt->execute([$weekStart, $weekEnd]);
+        $rows = $stmt->fetchAll();
+        
+        $alerts = [];
+        foreach ($rows as $row) {
+            $alerts[] = [
+                'id' => (int)$row['id'],
+                'type' => $row['alert_type'],
+                'category' => $row['alert_category'],
+                'severity' => $row['severity'],
+                'parameter' => $row['parameter_name'],
+                'current_value' => $row['current_value'] ? (float)$row['current_value'] : null,
+                'threshold_value' => $row['threshold_value'] ? (float)$row['threshold_value'] : null,
+                'threshold_type' => $row['threshold_type'],
+                'message' => $row['alert_message'],
+                'description' => $row['alert_description'],
+                'trigger_reason' => $row['trigger_reason'],
+                'device_response' => $row['device_response'],
+                'status' => $row['status'],
+                'timestamp' => $row['alert_timestamp'],
+                'created_at' => $row['created_at']
+            ];
+        }
+        return $alerts;
+    } catch (Exception $e) {
+        error_log("Get alerts for week failed: " . $e->getMessage());
+        return [];
+    }
 }
 ?>

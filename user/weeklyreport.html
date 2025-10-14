@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -21,7 +22,11 @@
                 <a href="weeklyreport.html" class="nav-item active"><i class="fa-solid fa-calendar-week"></i><span>Weekly Report</span></a>
             </div>
         </div>
-        <div class="nav-menu"><a href="../admin/login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+        <div style="margin-top: auto; padding-top: 20px;">
+            <div class="nav-menu">
+                <a href="#" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+            </div>
+        </div>
     </div>
     <div class="main-content">
         <div class="header">
@@ -31,32 +36,30 @@
             </div>
             <div class="header-controls" style="display: flex; align-items: center; gap: 16px;">
                 <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
-                    <label for="weekStart" style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Week starting:</label>
-                    <input type="date" id="weekStart" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--border-radius); background: var(--white); color: var(--text-primary);">
+                    <label for="reportWeek" id="weekLabel" style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Week:</label>
+                    <input type="week" id="reportWeek" value="" style="padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--border-radius); background: var(--white); color: var(--text-primary);">
                 </div>
-                <button id="loadBtn" class="control-btn" style="background: var(--gray-300); color: var(--white);">Load</button>
                 <button id="exportReport" class="control-btn" style="background: var(--primary-color);">Export PDF</button>
             </div>
         </div>
-        <div class="control-card" style="margin-top:16px;">
-            <h2 class="section-title">Summary</h2>
-            <div class="transfer-cards">
-                <div class="transfer-card"><div class="card-icon"><i class="fa-solid fa-temperature-half"></i></div><p class="card-title">Temperature Range</p><h2 class="card-amount" id="tRange">--</h2></div>
-                <div class="transfer-card"><div class="card-icon"><i class="fa-solid fa-droplet"></i></div><p class="card-title">Humidity Range</p><h2 class="card-amount" id="hRange">--</h2></div>
-                <div class="transfer-card"><div class="card-icon"><i class="fa-solid fa-flask"></i></div><p class="card-title">Ammonia Range</p><h2 class="card-amount" id="aRange">--</h2></div>
-                <div class="transfer-card"><div class="card-icon"><i class="fa-solid fa-bell"></i></div><p class="card-title">Alerts</p><h2 class="card-amount" id="alerts">--</h2></div>
+        <div class="report-container">
+            <div class="control-card">
+                <h2 class="section-title">Report</h2>
+                <div class="report-content">
+                    <div id="reportData">
+                        <p>Select a week to view the weekly report.</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="control-card" style="margin-top:16px;">
-            <h2 class="section-title">Report</h2>
-            <div id="reportData"><p>Select a week and press Load.</p></div>
-        </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', ()=>{
+            try{ const u = JSON.parse(localStorage.getItem('swift_user')||'null'); if(!u){ window.location.href = '../login.html'; return; } }catch(e){ window.location.href='../login.html'; return; }
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="../js/config.js"></script>
-    <script src="../js/?v=1759866184-09-20-disabled"></script>
-    <script src="../js/data-service.js"></script>
-    <script src="../js/?v=1759866184"></script>
+    <script src="../js/weeklyreport.js"></script>
 </body>
 </html>
-
-

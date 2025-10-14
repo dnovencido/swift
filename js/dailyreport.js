@@ -2,7 +2,7 @@ class DailyReport {
     constructor(){ 
         this.currentDate = new Date().toISOString().split('T')[0]; 
         this.reportData=null; 
-        this.deviceStatus = [];
+        window.dailyReportInstance = this;
         this.init(); 
     }
     
@@ -42,34 +42,35 @@ class DailyReport {
     
     async loadReportData(){
         try{
+            console.log('Loading report data for date:', this.currentDate);
             const res=await fetch('../php/api/v1/reports.php',{
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({
                     date:this.currentDate,
-                    type:'summary', // Always use summary type
+                    type:'summary',
                     period:'daily'
                 })
             });
-            if(!res.ok) throw new Error('fetch failed');
+            if(!res.ok) {
+                console.error('API response not OK:', res.status, res.statusText);
+                throw new Error(`API request failed: ${res.status}`);
+            }
             const d=await res.json();
-            this.reportData=d.data||null; 
+            console.log('API response:', d);
             
-            // Also fetch device status data like admin side
-            try {
-                const deviceRes = await fetch('../php/admin_lists.php?type=devices');
-                const deviceData = await deviceRes.json();
-                this.deviceStatus = deviceData.success ? deviceData.data : [];
-            } catch (e) {
-                console.warn('Failed to load device status:', e);
-                this.deviceStatus = [];
+            if(d.status === 'success' && d.data) {
+                this.reportData = d.data;
+                console.log('Report data loaded successfully:', this.reportData);
+            } else {
+                console.error('API returned error:', d.message);
+                this.reportData = null;
             }
             
             this.updateReportDisplay(); 
-            // Summary cards removed - no longer calling updateSummary()
         }catch(e){ 
+            console.error('Error loading report data:', e);
             this.reportData=null; 
-            this.deviceStatus = [];
             this.updateReportDisplay(); 
         }
     }
@@ -77,242 +78,388 @@ class DailyReport {
     updateReportDisplay(){ 
         const div=document.getElementById('reportData'); 
         if(!this.reportData){ 
-            div.innerHTML='<p>No data available for the selected date.</p>'; 
-                return;
-            }
+            div.innerHTML='<div style="text-align: center; padding: 40px;"><h3>No data available for the selected date.</h3><p>Please select a different date or check back later.</p></div>'; 
+            return;
+        }
+        
+        console.log('Updating report display with data:', this.reportData);
         div.innerHTML = this.generateSummaryHTML();
+        
+        setTimeout(() => {
+            this.initializeChart();
+        }, 100);
     }
     
     generateSummaryHTML(){ 
         const d=this.reportData; 
+        if(!d) return '<div class="transfer-card" style="grid-column: 1 / -1; text-align: center; padding: 40px;"><h3>No data available for this date</h3><p>Please select a different date or check back later.</p></div>';
         
-        // Add fallbacks for undefined values with proper labels
         const temp = d.temperature || { min: 0, max: 0, avg: 0 };
         const humidity = d.humidity || { min: 0, max: 0, avg: 0 };
         const ammonia = d.ammonia || { min: 0, max: 0, avg: 0 };
+        const controls = d.controls || { pump_on_time: 0, heat_on_time: 0, pump_triggers: 0, heat_triggers: 0 };
         const alerts = d.alerts || { temperature: 0, humidity: 0, ammonia: 0, total: 0 };
-        const systemStatus = d.system_status || 'No data available';
-        const notes = d.notes || 'No notes available for this date';
-        const controlEvents = d.control_events || [];
-        const notableEvents = d.notable_events || [];
-        const controls = d.controls || { pump_on_time: 0, heat_on_time: 0 };
         
         return `
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-            <!-- Sensor Summary Cards -->
+            <div class="report-container">
+                <!-- Section 1: Total Averages Summary -->
+                <div class="control-card">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Daily Summary - ${this.currentDate}</h3>
             <div class="transfer-cards">
                 <div class="transfer-card">
-                    <div class="card-icon"><i class="fa-solid fa-temperature-half"></i></div>
+                            <div class="card-icon" style="background: var(--danger); color: white;"><i class="fas fa-thermometer-half"></i></div>
                     <div>
                         <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Temperature</p>
-                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">${temp.avg}°C</h2>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Range: ${temp.min}°C - ${temp.max}°C</p>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--danger);">Alerts: ${alerts.temperature || 0}</p>
+                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${temp.avg.toFixed(1)}°C</h2>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Range: ${temp.min.toFixed(1)}°C - ${temp.max.toFixed(1)}°C</p>
                     </div>
                 </div>
                 <div class="transfer-card">
-                    <div class="card-icon"><i class="fa-solid fa-droplet"></i></div>
+                            <div class="card-icon" style="background: var(--info); color: white;"><i class="fas fa-tint"></i></div>
                     <div>
                         <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Humidity</p>
-                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">${humidity.avg}%</h2>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Range: ${humidity.min}% - ${humidity.max}%</p>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--danger);">Alerts: ${alerts.humidity || 0}</p>
+                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${humidity.avg.toFixed(1)}%</h2>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Range: ${humidity.min.toFixed(1)}% - ${humidity.max.toFixed(1)}%</p>
                     </div>
                 </div>
                 <div class="transfer-card">
-                    <div class="card-icon"><i class="fa-solid fa-flask"></i></div>
+                            <div class="card-icon" style="background: var(--warning); color: white;"><i class="fas fa-flask"></i></div>
                     <div>
                         <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Ammonia</p>
-                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">${ammonia.avg}ppm</h2>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Range: ${ammonia.min}ppm - ${ammonia.max}ppm</p>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--danger);">Alerts: ${alerts.ammonia || 0}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- System Status -->
-            <div class="control-card">
-                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">System Status</h3>
-                <div class="transfer-cards">
-                    <div class="transfer-card">
-                        <div class="card-icon" style="background: var(--success); color: white;"><i class="fas fa-check"></i></div>
-                        <div>
-                            <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">System Status</p>
-                            <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600; color: var(--success);">${systemStatus}</h2>
-                        </div>
-                    </div>
-                    <div class="transfer-card">
-                        <div class="card-icon" style="background: var(--danger); color: white;"><i class="fas fa-exclamation"></i></div>
-                        <div>
-                            <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Total Alerts</p>
-                            <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600; color: var(--danger);">${alerts.total || 0}</h2>
+                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${ammonia.avg.toFixed(1)} ppm</h2>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Range: ${ammonia.min.toFixed(1)} - ${ammonia.max.toFixed(1)} ppm</p>
                         </div>
                     </div>
                     <div class="transfer-card">
                         <div class="card-icon" style="background: var(--primary-color); color: white;"><i class="fas fa-tint"></i></div>
                         <div>
-                            <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Pump Runtime</p>
-                            <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${Math.round(controls.pump_on_time / 60)}h</h2>
+                                <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Pump Triggers</p>
+                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${controls.pump_triggers || 0}</h2>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Runtime: ${Math.round(controls.pump_on_time / 60)}h ${Math.round(controls.pump_on_time % 60)}m</p>
                         </div>
                     </div>
                     <div class="transfer-card">
                         <div class="card-icon" style="background: var(--warning); color: white;"><i class="fas fa-fire"></i></div>
                         <div>
-                            <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Heat Runtime</p>
-                            <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${Math.round(controls.heat_on_time / 60)}h</h2>
+                                <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Heat Triggers</p>
+                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${controls.heat_triggers || 0}</h2>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Runtime: ${Math.round(controls.heat_on_time / 60)}h ${Math.round(controls.heat_on_time % 60)}m</p>
                         </div>
                     </div>
                     <div class="transfer-card">
-                        <div class="card-icon" style="background: var(--gray-medium); color: white;"><i class="fas fa-cog"></i></div>
+                            <div class="card-icon" style="background: var(--gray-medium); color: white;"><i class="fas fa-exclamation-triangle"></i></div>
                         <div>
-                            <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Control Events</p>
-                            <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${controlEvents.length}</h2>
+                                <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Total Alerts</p>
+                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 18px; font-weight: 600;">${alerts.total || 0}</h2>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">Temp: ${alerts.temperature || 0} | Hum: ${alerts.humidity || 0} | Amm: ${alerts.ammonia || 0}</p>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Device Status -->
+                <!-- Section 2: Graph Representation -->
             <div class="control-card">
-                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Device Status & Components</h3>
-                ${this.deviceStatus.length > 0 ? this.deviceStatus.map(device => {
-                    const getComponentStatus = (status) => {
-                        if (status === 'active') return { color: 'var(--success)', text: 'Active', icon: 'check' };
-                        if (status === 'error') return { color: 'var(--warning)', text: 'Error', icon: 'exclamation-triangle' };
-                        return { color: 'var(--danger)', text: 'Offline', icon: 'times' };
-                    };
-                    
-                    const deviceStatus = device.status === 'up' ? { color: 'var(--success)', text: 'Online', icon: 'check' } : { color: 'var(--danger)', text: 'Offline', icon: 'times' };
-                    const tempHumidity = getComponentStatus(device.temp_humidity_sensor);
-                    const ammonia = getComponentStatus(device.ammonia_sensor);
-                    const thermal = getComponentStatus(device.thermal_camera);
-                    
-                    return `
-                        <div style="margin-bottom: 16px;">
-                            <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">${device.device_name || 'Unknown Device'}</h4>
-                            <div class="transfer-cards">
-                                <div class="transfer-card">
-                                    <div class="card-icon" style="background: ${deviceStatus.color}; color: white;"><i class="fas fa-${deviceStatus.icon}"></i></div>
-                                    <div>
-                                        <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">Device Status</p>
-                                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: ${deviceStatus.color};">${deviceStatus.text}</h2>
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Sensor Data Visualization</h3>
+                    <div style="width: 100%; height: 400px; position: relative;">
+                        <canvas id="dailyReportChart" width="800" height="400"></canvas>
                                     </div>
                                 </div>
-                                <div class="transfer-card">
-                                    <div class="card-icon" style="background: ${tempHumidity.color}; color: white;"><i class="fas fa-${tempHumidity.icon}"></i></div>
-                                    <div>
-                                        <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">DHT22 Sensor</p>
-                                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: ${tempHumidity.color};">${tempHumidity.text}</h2>
-                                    </div>
-                                </div>
-                                <div class="transfer-card">
-                                    <div class="card-icon" style="background: ${ammonia.color}; color: white;"><i class="fas fa-${ammonia.icon}"></i></div>
-                                    <div>
-                                        <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">MQ137 Sensor</p>
-                                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: ${ammonia.color};">${ammonia.text}</h2>
-                                    </div>
-                                </div>
-                                <div class="transfer-card">
-                                    <div class="card-icon" style="background: ${thermal.color}; color: white;"><i class="fas fa-${thermal.icon}"></i></div>
-                                    <div>
-                                        <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">AMG8833 Sensor</p>
-                                        <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: ${thermal.color};">${thermal.text}</h2>
-                                    </div>
-                                </div>
+                
+                <!-- Section 3: Alerts Section -->
+                <div class="control-card">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Alerts</h3>
+                    ${this.generateAlertsSection(d)}
                             </div>
                         </div>
                     `;
-                }).join('') : `
-                    <div class="transfer-card" style="grid-column: 1 / -1; text-align: center;">
-                        <div class="card-icon" style="background: var(--gray-medium); color: white;"><i class="fas fa-exclamation"></i></div>
-                        <div>
-                            <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">No device data available</p>
-                            <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: var(--text-secondary);">Unable to load device status</h2>
-                        </div>
-                    </div>
-                `}
-            </div>
+    }
+    
+    initializeChart() {
+        // Wait for Chart.js to be loaded
+        if (typeof Chart === 'undefined') {
+            console.log('Chart.js not loaded, retrying in 1 second...');
+            setTimeout(() => this.initializeChart(), 1000);
+            return;
+        }
+        
+        const canvas = document.getElementById('dailyReportChart');
+        if (!canvas || !this.reportData) {
+            console.log('Chart initialization failed:', {
+                canvas: !!canvas,
+                reportData: !!this.reportData,
+                hourlyData: this.reportData?.hourly_breakdown?.length || 0
+            });
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        const data = this.reportData;
+        
+        const hourlyData = data.hourly_breakdown || [];
+        console.log('Chart data:', {
+            hourlyData: hourlyData.length,
+            sample: hourlyData[0]
+        });
+        
+        const labels = hourlyData.map(h => `${h.hour}:00`);
+        const temperatureData = hourlyData.map(h => h.temperature?.avg || 0);
+        const humidityData = hourlyData.map(h => h.humidity?.avg || 0);
+        const ammoniaData = hourlyData.map(h => h.ammonia?.avg || 0);
+        
+        console.log('Chart datasets:', {
+            labels: labels.length,
+            temperature: temperatureData,
+            humidity: humidityData,
+            ammonia: ammoniaData
+        });
+        
+        try {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Temperature (°C)',
+                            data: temperatureData,
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Humidity (%)',
+                            data: humidityData,
+                            borderColor: '#4ecdc4',
+                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Ammonia (ppm)',
+                            data: ammoniaData,
+                            borderColor: '#45b7d1',
+                            backgroundColor: 'rgba(69, 183, 209, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: `Sensor Data Trends - ${this.currentDate}`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+            console.log('Chart created successfully');
+        } catch (error) {
+            console.error('Chart creation failed:', error);
+        }
+    }
+    
+    generateAlertsSection(data) {
+        const dbAlerts = data.individual_alerts || data.alerts || [];
+        
+        const alerts = dbAlerts.map(alert => {
+            let icon = '<i class="fas fa-exclamation-triangle"></i>';
+            switch(alert.type) {
+                case 'temperature':
+                    icon = '<i class="fas fa-thermometer-half"></i>';
+                    break;
+                case 'humidity':
+                    icon = '<i class="fas fa-tint"></i>';
+                    break;
+                case 'ammonia':
+                    icon = '<i class="fas fa-flask"></i>';
+                    break;
+                case 'device_response':
+                    if (alert.parameter.includes('Sprinkler')) {
+                        icon = '<i class="fas fa-tint"></i>';
+                    } else if (alert.parameter.includes('Heat')) {
+                        icon = '<i class="fas fa-fire"></i>';
+                    } else {
+                        icon = '<i class="fas fa-wrench"></i>';
+                    }
+                    break;
+                case 'system':
+                    icon = '<i class="fas fa-exclamation-triangle"></i>';
+                    break;
+            }
             
-            <!-- Control Events -->
-            <div class="control-card">
-                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Control Events & Activity Log</h3>
-                ${controlEvents.length > 0 ? `
-                    <div class="table-container">
-                        <table class="activity-table">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Action</th>
-                                    <th>Description</th>
-                                    <th>Trigger</th>
-                                    <th>Device</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${controlEvents.slice(0, 20).map(event => {
-                                    const actionClass = event.type.includes('pump') ? 
-                                        (event.type.includes('on') ? 'action-pump-on' : 'action-pump-off') :
-                                        event.type.includes('heat') ? 
-                                        (event.type.includes('on') ? 'action-heat-on' : 'action-heat-off') :
-                                        'action-system';
+            let unit = '';
+            if (alert.parameter.includes('Temperature')) {
+                unit = '°C';
+            } else if (alert.parameter.includes('Humidity')) {
+                unit = '%';
+            } else if (alert.parameter.includes('Ammonia')) {
+                unit = 'ppm';
+            }
+            
+            return {
+                id: alert.id,
+                type: alert.type,
+                icon: icon,
+                parameter: alert.parameter,
+                currentValue: alert.current_value,
+                threshold: alert.threshold_value ? `${alert.threshold_value}${unit}` : 'N/A',
+                status: alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1),
+                severity: alert.severity,
+                message: alert.message,
+                timestamp: alert.timestamp,
+                description: alert.description,
+                triggerReason: alert.trigger_reason,
+                deviceResponse: alert.device_response,
+                alertStatus: alert.status
+            };
+        });
+        
+        alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        if (alerts.length === 0) {
+            return `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <i class="fas fa-check-circle" style="font-size: 48px; margin-bottom: 16px; color: var(--success);"></i>
+                    <p>No alerts detected for this date.</p>
+                    <p style="font-size: 14px; margin-top: 8px;">All parameters are within normal ranges.</p>
+                        </div>
+            `;
+        }
                                     
                                     return `
-                                        <tr>
-                                            <td class="activity-time">${new Date(event.time).toLocaleString()}</td>
-                                            <td><span class="activity-action ${actionClass}">${event.action}</span></td>
-                                            <td class="activity-description">${event.description}</td>
-                                            <td>${event.trigger_value ? event.trigger_value + (event.type.includes('temp') ? '°C' : event.type.includes('humidity') ? '%' : 'ppm') : '-'}</td>
-                                            <td>${event.device}</td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
+            <!-- Filter Options -->
+            <div style="margin-bottom: 16px; padding: 12px; background: var(--gray-light); border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Filter by type:</span>
+                    <button onclick="window.dailyReportInstance.filterAlerts('all')" class="filter-btn active" style="padding: 6px 12px; border: 1px solid var(--primary-color); background: var(--primary-color); color: white; border-radius: 6px; font-size: 12px; cursor: pointer;">All</button>
+                    <button onclick="window.dailyReportInstance.filterAlerts('temperature')" class="filter-btn" style="padding: 6px 12px; border: 1px solid var(--gray-300); background: white; color: var(--text-primary); border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-thermometer-half"></i> Temperature</button>
+                    <button onclick="window.dailyReportInstance.filterAlerts('humidity')" class="filter-btn" style="padding: 6px 12px; border: 1px solid var(--gray-300); background: white; color: var(--text-primary); border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-tint"></i> Humidity</button>
+                    <button onclick="window.dailyReportInstance.filterAlerts('ammonia')" class="filter-btn" style="padding: 6px 12px; border: 1px solid var(--gray-300); background: white; color: var(--text-primary); border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-flask"></i> Ammonia</button>
+                    <button onclick="window.dailyReportInstance.filterAlerts('device_response')" class="filter-btn" style="padding: 6px 12px; border: 1px solid var(--gray-300); background: white; color: var(--text-primary); border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-wrench"></i> Device Response</button>
                     </div>
-                ` : `
-                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-                        <p>No control events recorded for this date.</p>
-                    </div>
-                `}
             </div>
             
-            <!-- Notable Events -->
-            ${notableEvents.length > 0 ? `
-            <div class="control-card">
-                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Notable Events & Alerts</h3>
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    ${notableEvents.slice(0, 15).map(event => {
-                        const severityColor = event.severity === 'high' ? 'var(--danger)' : 
-                                           event.severity === 'medium' ? 'var(--warning)' : 'var(--info)';
-                        const severityIcon = event.severity === 'high' ? 'exclamation-triangle' : 
-                                           event.severity === 'medium' ? 'exclamation-circle' : 'info-circle';
+            <div class="alert-container" style="max-height: 400px; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 12px;">
+                ${alerts.map(alert => {
+                    const severityColors = {
+                        'critical': { bg: '#fee2e2', border: '#dc2626', text: '#dc2626', dot: '<i class="fas fa-circle" style="color: #dc2626;"></i>' },
+                        'warning': { bg: '#fef3c7', border: '#d97706', text: '#d97706', dot: '<i class="fas fa-circle" style="color: #d97706;"></i>' },
+                        'info': { bg: '#dbeafe', border: '#2563eb', text: '#2563eb', dot: '<i class="fas fa-circle" style="color: #2563eb;"></i>' },
+                        'normal': { bg: '#f0fdf4', border: '#16a34a', text: '#16a34a', dot: '<i class="fas fa-circle" style="color: #16a34a;"></i>' }
+                    };
+                    
+                    const colors = severityColors[alert.severity] || severityColors['normal'];
                         
                         return `
-                            <div style="display: flex; align-items: center; padding: 12px; background: var(--gray-light); border-radius: 8px; border-left: 4px solid ${severityColor};">
-                                <i class="fas fa-${severityIcon}" style="color: ${severityColor}; margin-right: 12px; font-size: 18px;"></i>
+                        <div class="alert-card" data-alert-type="${alert.type}" style="display: flex; align-items: flex-start; padding: 16px; background: ${colors.bg}; border-radius: 12px; border-left: 4px solid ${colors.border}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0;">
+                            <div style="margin-right: 12px; font-size: 24px;">${alert.icon}</div>
                                 <div style="flex: 1;">
-                                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${event.message}</div>
-                                    <div style="font-size: 14px; color: var(--text-secondary);">${new Date(event.time).toLocaleString()}</div>
-                                    ${event.values ? `
-                                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                                            Temp: ${event.values.temperature}°C | Humidity: ${event.values.humidity}% | Ammonia: ${event.values.ammonia}ppm
+                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; color: var(--text-primary); margin-right: 8px;">${alert.message}</span>
+                                    <span style="font-size: 16px;">${colors.dot}</span>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px;">
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        <strong>Parameter:</strong> ${alert.parameter}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        <strong>Current:</strong> ${alert.currentValue || 'N/A'}${alert.currentValue ? (alert.parameter.includes('Temperature') ? '°C' : alert.parameter.includes('Humidity') ? '%' : alert.parameter.includes('Ammonia') ? 'ppm' : '') : ''}
+                                </div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        <strong>Threshold:</strong> ${alert.threshold}
+                                    </div>
+                                    <div style="font-size: 12px; color: ${colors.text}; font-weight: 600;">
+                                        <strong>Status:</strong> ${alert.status}
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        ${new Date(alert.timestamp).toLocaleString()}
+                                    </div>
+                                    ${alert.deviceResponse ? `
+                                        <div style="font-size: 12px; color: var(--text-secondary);">
+                                            Response: ${alert.deviceResponse}
                                         </div>
                                     ` : ''}
+                                    <button onclick="this.parentElement.parentElement.parentElement.style.display='none'" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; border-radius: 4px; hover:background: var(--gray-light);">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                                 </div>
                             </div>
                         `;
                     }).join('')}
                 </div>
-            </div>
-            ` : ''}
             
-            <!-- Notes -->
-            <div class="control-card">
-                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--text-primary);">Notes</h3>
-                <p style="margin: 0; color: var(--text-secondary); line-height: 1.5;">${notes}</p>
+            <!-- Alert Count Indicator -->
+            <div style="margin-top: 12px; padding: 8px 12px; background: var(--gray-light); border-radius: 6px; text-align: center;">
+                <span style="font-size: 12px; color: var(--text-secondary);">
+                    <i class="fas fa-info-circle"></i> Showing ${alerts.length} alert${alerts.length !== 1 ? 's' : ''} 
+                    ${alerts.length > 5 ? '(scroll to see more)' : ''}
+                </span>
             </div>
-        </div>`; 
+        `;
+    }
+    
+    filterAlerts(type) {
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        
+        filterButtons.forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.background = 'white';
+            btn.style.color = 'var(--text-primary)';
+            btn.style.border = '1px solid var(--gray-300)';
+        });
+        
+        const clickedBtn = Array.from(filterButtons).find(btn => {
+            const btnText = btn.textContent.toLowerCase();
+            return (type === 'all' && btnText.includes('all')) ||
+                   (type === 'temperature' && btnText.includes('temperature')) ||
+                   (type === 'humidity' && btnText.includes('humidity')) ||
+                   (type === 'ammonia' && btnText.includes('ammonia')) ||
+                   (type === 'device_response' && btnText.includes('device response'));
+        });
+        
+        if (clickedBtn) {
+            clickedBtn.classList.add('active');
+            clickedBtn.style.background = 'var(--primary-color)';
+            clickedBtn.style.color = 'white';
+            clickedBtn.style.border = '1px solid var(--primary-color)';
+        }
+        
+        const alertCards = document.querySelectorAll('.alert-card');
+        alertCards.forEach(card => {
+            const cardType = card.dataset.alertType;
+            if (type === 'all' || cardType === type) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
     }
     
     async exportReport(){ 
@@ -322,43 +469,185 @@ class DailyReport {
         } 
         
         try {
-            // Create PDF content
+            const exportBtn = document.getElementById('exportReport');
+            const originalText = exportBtn.textContent;
+            exportBtn.textContent = 'Generating PDF...';
+            exportBtn.disabled = true;
+            
             const pdfContent = this.generatePDFContent();
             
-            // Create a new window with the PDF content
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <title>Daily Report - ${this.currentDate}</title>
+                    <meta charset="UTF-8">
                     <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .header h1 { color: #0A4174; margin-bottom: 5px; }
-                        .header p { color: #666; }
-                        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-                        .summary-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center; }
-                        .summary-card h3 { color: #0A4174; margin-bottom: 10px; }
-                        .summary-card .value { font-size: 24px; font-weight: bold; margin: 10px 0; }
-                        .summary-card .range { color: #666; font-size: 14px; }
-                        .section { margin-bottom: 25px; }
-                        .section h4 { color: #0A4174; border-bottom: 2px solid #0A4174; padding-bottom: 5px; }
-                        .alerts-list { margin-top: 15px; }
-                        .alert-item { padding: 8px; margin: 5px 0; border-left: 4px solid #ff6b6b; background: #f8f9fa; }
-                        .alert-item.warning { border-left-color: #ffa726; }
-                        .alert-item.info { border-left-color: #42a5f5; }
-                        .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                            margin: 0; 
+                            padding: 20px; 
+                            background: #f8f9fa;
+                            color: #333;
+                        }
+                        .container {
+                            max-width: 1200px;
+                            margin: 0 auto;
+                            background: white;
+                            padding: 30px;
+                            border-radius: 12px;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        }
+                        .header { 
+                            text-align: center; 
+                            margin-bottom: 40px; 
+                            padding-bottom: 20px;
+                            border-bottom: 3px solid #0A4174;
+                        }
+                        .header h1 { 
+                            color: #0A4174; 
+                            margin-bottom: 10px; 
+                            font-size: 32px;
+                            font-weight: 700;
+                        }
+                        .header p { 
+                            color: #666; 
+                            font-size: 16px;
+                            margin: 0;
+                        }
+                        .summary-section {
+                            margin-bottom: 40px;
+                        }
+                        .summary-title {
+                            font-size: 24px;
+                            font-weight: 600;
+                            color: #0A4174;
+                            margin-bottom: 20px;
+                            padding-bottom: 10px;
+                            border-bottom: 2px solid #e9ecef;
+                        }
+                        .summary-grid { 
+                            display: grid; 
+                            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+                            gap: 20px; 
+                            margin-bottom: 30px; 
+                        }
+                        .summary-card { 
+                            border: 1px solid #e9ecef; 
+                            padding: 20px; 
+                            border-radius: 12px; 
+                            text-align: center;
+                            background: #f8f9fa;
+                            transition: all 0.3s ease;
+                        }
+                        .summary-card h3 { 
+                            color: #0A4174; 
+                            margin-bottom: 15px; 
+                            font-size: 18px;
+                            font-weight: 600;
+                        }
+                        .summary-card .value { 
+                            font-size: 28px; 
+                            font-weight: bold; 
+                            margin: 15px 0; 
+                            color: #333;
+                        }
+                        .summary-card .range { 
+                            color: #666; 
+                            font-size: 14px; 
+                            margin: 5px 0;
+                        }
+                         .chart-section {
+                             margin-bottom: 40px;
+                         }
+                         .chart-svg {
+                             max-width: 100%;
+                             height: auto;
+                             border: 1px solid #e9ecef;
+                             border-radius: 8px;
+                             background: white;
+                             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                         }
+                        .alerts-section {
+                            margin-bottom: 40px;
+                        }
+                        .alerts-title {
+                            font-size: 24px;
+                            font-weight: 600;
+                            color: #0A4174;
+                            margin-bottom: 20px;
+                            padding-bottom: 10px;
+                            border-bottom: 2px solid #e9ecef;
+                        }
+                        .alerts-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                            gap: 15px;
+                        }
+                        .alert-card {
+                            border: 1px solid #e9ecef;
+                            border-left: 4px solid #ff6b6b;
+                            padding: 15px;
+                            border-radius: 8px;
+                            background: #fff;
+                        }
+                        .alert-card.warning { border-left-color: #ffa726; }
+                        .alert-card.info { border-left-color: #42a5f5; }
+                        .alert-card.normal { border-left-color: #28a745; }
+                        .alert-header {
+                            display: flex;
+                            align-items: center;
+                            margin-bottom: 10px;
+                        }
+                        .alert-icon {
+                            font-size: 20px;
+                            margin-right: 10px;
+                        }
+                        .alert-title {
+                            font-weight: 600;
+                            color: #333;
+                        }
+                        .alert-details {
+                            font-size: 14px;
+                            color: #666;
+                            line-height: 1.4;
+                        }
+                        .alert-time {
+                            font-size: 12px;
+                            color: #999;
+                            margin-top: 8px;
+                        }
+                        .footer { 
+                            margin-top: 50px; 
+                            text-align: center; 
+                            color: #666; 
+                            font-size: 14px;
+                            padding-top: 20px;
+                            border-top: 1px solid #e9ecef;
+                        }
                         @media print {
-                            body { margin: 0; }
+                            body { 
+                                margin: 0; 
+                                padding: 15px;
+                                background: white;
+                            }
+                            .container {
+                                box-shadow: none;
+                                padding: 20px;
+                            }
                             .summary-grid { page-break-inside: avoid; }
+                            .alerts-grid { page-break-inside: avoid; }
                         }
                     </style>
                 </head>
                 <body>
+                    <div class="container">
                     ${pdfContent}
                     <div class="footer">
-                        <p>Generated on ${new Date().toLocaleString()} | SWIFT 2.0 System</p>
+                            <p><strong>Generated on ${new Date().toLocaleString()}</strong> | SWIFT 2.0 Monitoring System</p>
+                            <p>This report contains automated sensor data and system alerts for ${this.currentDate}</p>
+                        </div>
                     </div>
                 </body>
                 </html>
@@ -366,15 +655,21 @@ class DailyReport {
             
             printWindow.document.close();
             
-            // Wait for content to load, then trigger print
             setTimeout(() => {
                 printWindow.print();
                 printWindow.close();
-            }, 500);
+                
+                exportBtn.textContent = originalText;
+                exportBtn.disabled = false;
+            }, 1000);
             
         } catch (error) {
             console.error('PDF export error:', error);
             alert('Failed to export PDF. Please try again.');
+            
+            const exportBtn = document.getElementById('exportReport');
+            exportBtn.textContent = 'Export PDF';
+            exportBtn.disabled = false;
         }
     }
     
@@ -387,51 +682,11 @@ class DailyReport {
             day: 'numeric'
         });
         
-        // Add fallbacks for undefined values
         const temp = d.temperature || { min: 0, max: 0, avg: 0 };
         const humidity = d.humidity || { min: 0, max: 0, avg: 0 };
         const ammonia = d.ammonia || { min: 0, max: 0, avg: 0 };
+        const controls = d.controls || { pump_on_time: 0, heat_on_time: 0, pump_triggers: 0, heat_triggers: 0 };
         const alerts = d.alerts || { temperature: 0, humidity: 0, ammonia: 0, total: 0 };
-        const systemStatus = d.system_status || 'No data available';
-        const notes = d.notes || 'No notes available for this date';
-        
-        // Generate device status HTML
-        const deviceStatusHtml = this.deviceStatus.length > 0 ? this.deviceStatus.map(device => {
-            const getComponentStatus = (status) => {
-                if (status === 'active') return { color: '#22c55e', text: 'Active' };
-                if (status === 'error') return { color: '#f59e0b', text: 'Error' };
-                return { color: '#ef4444', text: 'Offline' };
-            };
-            
-            const deviceStatus = device.status === 'up' ? { color: '#22c55e', text: 'Online' } : { color: '#ef4444', text: 'Offline' };
-            const tempHumidity = getComponentStatus(device.temp_humidity_sensor);
-            const ammonia = getComponentStatus(device.ammonia_sensor);
-            const thermal = getComponentStatus(device.thermal_camera);
-            
-            return `
-                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h5 style="margin: 0 0 10px 0; color: #0A4174;">${device.device_name || 'Unknown Device'}</h5>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-                            <strong>Device Status</strong><br>
-                            <span style="color: ${deviceStatus.color}; font-weight: bold;">${deviceStatus.text}</span>
-                        </div>
-                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-                            <strong>DHT22 Sensor</strong><br>
-                            <span style="color: ${tempHumidity.color}; font-weight: bold;">${tempHumidity.text}</span>
-                        </div>
-                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-                            <strong>MQ137 Sensor</strong><br>
-                            <span style="color: ${ammonia.color}; font-weight: bold;">${ammonia.text}</span>
-                        </div>
-                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-                            <strong>AMG8833 Sensor</strong><br>
-                            <span style="color: ${thermal.color}; font-weight: bold;">${thermal.text}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('') : '<p style="color: #666; font-style: italic;">No device data available</p>';
         
         return `
             <div class="header">
@@ -439,150 +694,266 @@ class DailyReport {
                 <p>${date}</p>
             </div>
             
+            <!-- Section 1: Summary -->
+            <div class="summary-section">
+                <h2 class="summary-title">Daily Summary</h2>
             <div class="summary-grid">
                 <div class="summary-card">
                     <h3>Temperature</h3>
-                    <div class="value">${temp.avg}°C</div>
-                    <div class="range">Range: ${temp.min}°C - ${temp.max}°C</div>
+                        <div class="value">${temp.avg.toFixed(1)}°C</div>
+                        <div class="range">Range: ${temp.min.toFixed(1)}°C - ${temp.max.toFixed(1)}°C</div>
                     <div class="range">Alerts: ${alerts.temperature || 0}</div>
                 </div>
                 <div class="summary-card">
                     <h3>Humidity</h3>
-                    <div class="value">${humidity.avg}%</div>
-                    <div class="range">Range: ${humidity.min}% - ${humidity.max}%</div>
+                        <div class="value">${humidity.avg.toFixed(1)}%</div>
+                        <div class="range">Range: ${humidity.min.toFixed(1)}% - ${humidity.max.toFixed(1)}%</div>
                     <div class="range">Alerts: ${alerts.humidity || 0}</div>
                 </div>
                 <div class="summary-card">
                     <h3>Ammonia</h3>
-                    <div class="value">${ammonia.avg}ppm</div>
-                    <div class="range">Range: ${ammonia.min}ppm - ${ammonia.max}ppm</div>
+                        <div class="value">${ammonia.avg.toFixed(1)} ppm</div>
+                        <div class="range">Range: ${ammonia.min.toFixed(1)} - ${ammonia.max.toFixed(1)} ppm</div>
                     <div class="range">Alerts: ${alerts.ammonia || 0}</div>
                 </div>
+                    <div class="summary-card">
+                        <h3>Pump Triggers</h3>
+                        <div class="value">${controls.pump_triggers || 0}</div>
+                        <div class="range">Runtime: ${Math.round(controls.pump_on_time / 60)}h ${Math.round(controls.pump_on_time % 60)}m</div>
             </div>
-            
-            <div class="section">
-                <h4>System Status</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0;">
-                    <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
-                        <strong>System Status</strong><br>
-                        <span style="color: #28a745; font-weight: bold;">${systemStatus}</span>
+                    <div class="summary-card">
+                        <h3>Heat Triggers</h3>
+                        <div class="value">${controls.heat_triggers || 0}</div>
+                        <div class="range">Runtime: ${Math.round(controls.heat_on_time / 60)}h ${Math.round(controls.heat_on_time % 60)}m</div>
                     </div>
-                    <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #dc3545;">
-                        <strong>Total Alerts</strong><br>
-                        <span style="color: #dc3545; font-weight: bold;">${alerts.total || 0}</span>
-                    </div>
-                    <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
-                        <strong>Pump Events</strong><br>
-                        <span style="color: #0c5460; font-weight: bold;">4</span>
-                    </div>
-                    <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ffc107;">
-                        <strong>Heat Events</strong><br>
-                        <span style="color: #856404; font-weight: bold;">3</span>
-                    </div>
-                    <div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #6c757d;">
-                        <strong>System Events</strong><br>
-                        <span style="color: #495057; font-weight: bold;">3</span>
+                    <div class="summary-card">
+                        <h3>Total Alerts</h3>
+                        <div class="value">${alerts.total || 0}</div>
+                        <div class="range">Temp: ${alerts.temperature || 0} | Hum: ${alerts.humidity || 0} | Amm: ${alerts.ammonia || 0}</div>
                     </div>
                 </div>
             </div>
             
-            <div class="section">
-                <h4>Device Status & Components</h4>
-                ${deviceStatusHtml}
+             <!-- Section 2: Chart Data Table -->
+             <div class="chart-section">
+                 <h2 class="summary-title">Sensor Data Visualization</h2>
+                 ${this.generatePDFChartSection(d)}
             </div>
             
-            <div class="section">
-                <h4>Control Events & Activity Log</h4>
-                <div style="margin-bottom: 15px;">
-                    <h5 style="color: #0A4174; margin-bottom: 10px;">Pump Control Events:</h5>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #28a745;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>PUMP ON:</strong> Triggered by High Temperature (25.5°C)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 14:32:15</span>
+            <!-- Section 3: Alerts -->
+            <div class="alerts-section">
+                <h2 class="alerts-title">System Alerts</h2>
+                ${this.generatePDFAlertsSection(d)}
                         </div>
-                    </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #dc3545;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>PUMP OFF:</strong> Temperature normalized (22.1°C)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 14:45:22</span>
-                        </div>
-                    </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #28a745;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>PUMP ON:</strong> Triggered by High Ammonia (52.3ppm)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 16:45:22</span>
-                        </div>
-                    </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #dc3545;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>PUMP OFF:</strong> Ammonia levels normalized (45.1ppm)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 17:12:08</span>
-                        </div>
-                    </div>
+        `;
+    }
+    
+    generatePDFChartSection(data) {
+        const hourlyData = data.hourly_breakdown || [];
+        
+        if (hourlyData.length === 0) {
+            return `
+                <div style="text-align: center; padding: 40px; color: #666; font-style: italic;">
+                    <p>No hourly data available for this date.</p>
                 </div>
+            `;
+        }
+        
+        const labels = hourlyData.map(h => `${h.hour}:00`);
+        const temperatureData = hourlyData.map(h => h.temperature?.avg || 0);
+        const humidityData = hourlyData.map(h => h.humidity?.avg || 0);
+        const ammoniaData = hourlyData.map(h => h.ammonia?.avg || 0);
+        
+        const width = 800;
+        const height = 400;
+        const padding = 60;
+        const chartWidth = width - (padding * 2);
+        const chartHeight = height - (padding * 2);
+        
+        const allValues = [...temperatureData, ...humidityData, ...ammoniaData];
+        const minValue = Math.min(...allValues);
+        const maxValue = Math.max(...allValues);
+        const valueRange = maxValue - minValue;
+        const paddingValue = valueRange * 0.1;
+        const scaledMin = Math.max(0, minValue - paddingValue);
+        const scaledMax = maxValue + paddingValue;
+        const scaledRange = scaledMax - scaledMin;
+        
+        const valueToY = (value) => {
+            return padding + chartHeight - ((value - scaledMin) / scaledRange) * chartHeight;
+        };
+        
+        const indexToX = (index) => {
+            return padding + (index / (labels.length - 1)) * chartWidth;
+        };
+        
+        const generatePath = (data, color) => {
+            const points = data.map((value, index) => {
+                const x = indexToX(index);
+                const y = valueToY(value);
+                return `${x},${y}`;
+            }).join(' L');
+            return `M${points}`;
+        };
+        
+        const svg = `
+            <svg width="${width}" height="${height}" style="border: 1px solid #e9ecef; border-radius: 8px; background: white;">
+                <!-- Grid lines -->
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
                 
-                <div style="margin-bottom: 15px;">
-                    <h5 style="color: #0A4174; margin-bottom: 10px;">Heat Control Events:</h5>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>HEAT ON:</strong> Triggered by Low Temperature (17.2°C)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 08:15:30</span>
-                        </div>
-                    </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #6c757d;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>HEAT OFF:</strong> Temperature reached target (19.8°C)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 08:42:15</span>
-                        </div>
-                    </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>HEAT ON:</strong> Triggered by Low Temperature (16.8°C)</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 22:30:45</span>
-                        </div>
-                    </div>
-                </div>
+                <!-- Y-axis -->
+                <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#333" stroke-width="2"/>
                 
-                <div style="margin-bottom: 15px;">
-                    <h5 style="color: #0A4174; margin-bottom: 10px;">System Events:</h5>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #17a2b8;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>SYSTEM:</strong> Mode changed to AUTO</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 06:00:00</span>
+                <!-- X-axis -->
+                <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#333" stroke-width="2"/>
+                
+                <!-- Y-axis labels -->
+                ${Array.from({length: 6}, (_, i) => {
+                    const value = scaledMin + (scaledRange / 5) * i;
+                    const y = valueToY(value);
+                    return `<text x="${padding - 10}" y="${y + 5}" text-anchor="end" font-size="12" fill="#666">${value.toFixed(1)}</text>`;
+                }).join('')}
+                
+                <!-- X-axis labels -->
+                ${labels.map((label, index) => {
+                    const x = indexToX(index);
+                    return `<text x="${x}" y="${height - padding + 20}" text-anchor="middle" font-size="10" fill="#666">${label}</text>`;
+                }).join('')}
+                
+                <!-- Temperature line -->
+                <path d="${generatePath(temperatureData)}" fill="none" stroke="#ff6b6b" stroke-width="3"/>
+                
+                <!-- Humidity line -->
+                <path d="${generatePath(humidityData)}" fill="none" stroke="#4ecdc4" stroke-width="3"/>
+                
+                <!-- Ammonia line -->
+                <path d="${generatePath(ammoniaData)}" fill="none" stroke="#45b7d1" stroke-width="3"/>
+                
+                <!-- Data points -->
+                ${temperatureData.map((value, index) => {
+                    const x = indexToX(index);
+                    const y = valueToY(value);
+                    return `<circle cx="${x}" cy="${y}" r="4" fill="#ff6b6b"/>`;
+                }).join('')}
+                
+                ${humidityData.map((value, index) => {
+                    const x = indexToX(index);
+                    const y = valueToY(value);
+                    return `<circle cx="${x}" cy="${y}" r="4" fill="#4ecdc4"/>`;
+                }).join('')}
+                
+                ${ammoniaData.map((value, index) => {
+                    const x = indexToX(index);
+                    const y = valueToY(value);
+                    return `<circle cx="${x}" cy="${y}" r="4" fill="#45b7d1"/>`;
+                }).join('')}
+                
+                <!-- Legend -->
+                <g transform="translate(${width - 200}, 20)">
+                    <rect x="0" y="0" width="180" height="80" fill="white" stroke="#e9ecef" stroke-width="1" rx="4"/>
+                    <line x1="10" y1="20" x2="30" y2="20" stroke="#ff6b6b" stroke-width="3"/>
+                    <text x="35" y="25" font-size="12" fill="#333">Temperature (°C)</text>
+                    <line x1="10" y1="40" x2="30" y2="40" stroke="#4ecdc4" stroke-width="3"/>
+                    <text x="35" y="45" font-size="12" fill="#333">Humidity (%)</text>
+                    <line x1="10" y1="60" x2="30" y2="60" stroke="#45b7d1" stroke-width="3"/>
+                    <text x="35" y="65" font-size="12" fill="#333">Ammonia (ppm)</text>
+                </g>
+                
+                <!-- Chart title -->
+                <text x="${width / 2}" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#0A4174">
+                    Sensor Data Trends - ${this.currentDate}
+                </text>
+            </svg>
+        `;
+        
+        return `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #0A4174;">
+                    Sensor Data Visualization
+                </h3>
+                ${svg}
                         </div>
-                    </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #dc3545;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>ALERT:</strong> MQ137 Ammonia sensor offline</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 12:15:30</span>
+        `;
+    }
+    
+    generatePDFAlertsSection(data) {
+        const dbAlerts = data.individual_alerts || data.alerts || [];
+        
+        if (dbAlerts.length === 0) {
+            return `
+                <div class="alerts-grid">
+                    <div class="alert-card normal" style="text-align: center; padding: 40px;">
+                        <div class="alert-header" style="justify-content: center;">
+                            <span class="alert-icon" style="font-size: 48px; color: #16a34a;">✅</span>
                         </div>
+                        <div class="alert-title" style="font-size: 18px; font-weight: 600; color: #16a34a; margin: 16px 0;">
+                            No alerts detected for this date.
                     </div>
-                    <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #28a745;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span><strong>SYSTEM:</strong> All sensors operational</span>
-                            <span style="color: #666; font-size: 14px;">2024-01-15 18:00:00</span>
+                        <div class="alert-details" style="font-size: 14px; color: #666;">
+                            All parameters are within normal ranges.
                         </div>
                     </div>
                 </div>
-            </div>
+            `;
+        }
+        
+        const displayAlerts = dbAlerts.map(alert => {
+            const getIcon = (type) => {
+                switch(type) {
+                    case 'temperature': return '🌡️';
+                    case 'humidity': return '💧';
+                    case 'ammonia': return '💨';
+                    case 'device_response': return '🔧';
+                    default: return '⚠️';
+                }
+            };
             
-            <div class="section">
-                <h4>Notes</h4>
-                <p>${notes}</p>
-            </div>
+            const getSeverityClass = (severity) => {
+                switch(severity) {
+                    case 'critical': return 'critical';
+                    case 'warning': return 'warning';
+                    case 'low': return 'normal';
+                    default: return 'info';
+                }
+            };
             
-            ${d.alerts && d.alerts.length > 0 ? `
-            <div class="section">
-                <h4>Alerts Summary</h4>
-                <div class="alerts-list">
-                    ${d.alerts.map(alert => `
-                        <div class="alert-item ${alert.type}">
-                            <strong>${alert.time}</strong> - ${alert.message}
+            const getUnit = (parameter) => {
+                switch(parameter) {
+                    case 'Temperature': return '°C';
+                    case 'Humidity': return '%';
+                    case 'Ammonia': return 'ppm';
+                    default: return '';
+                }
+            };
+            
+            return `
+                <div class="alert-card ${getSeverityClass(alert.severity)}">
+                    <div class="alert-header">
+                        <span class="alert-icon">${getIcon(alert.type)}</span>
+                        <span class="alert-title">${alert.parameter || 'System Alert'}</span>
                         </div>
-                    `).join('')}
-                </div>
+                    <div class="alert-details">
+                        <strong>${alert.message || 'Alert detected'}</strong><br>
+                        ${alert.current_value ? `Current: ${alert.current_value}${getUnit(alert.parameter)}` : ''}
+                        ${alert.threshold_value ? ` | Threshold: ${alert.threshold_value}${getUnit(alert.parameter)}` : ''}
+                        ${alert.device_response ? `<br>Response: ${alert.device_response}` : ''}
+                    </div>
+                    <div class="alert-time">
+                        ${new Date(alert.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+            `;
+        });
+        
+        return `
+            <div class="alerts-grid">
+                ${displayAlerts.join('')}
             </div>
-            ` : ''}
         `;
     }
     
@@ -595,7 +966,7 @@ class DailyReport {
         }).finally(()=>{ 
             try{localStorage.removeItem('swift_user');}catch(e){} 
             try{ window.SWIFT_DATA_SERVICE?.stop(); }catch(e){} 
-            window.location.href='../admin/login.html'; 
+            window.location.href='../login.html'; 
         }); 
     }
 }

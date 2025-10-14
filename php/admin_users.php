@@ -7,11 +7,9 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/activity_logger.php';
-
 try {
     $db = DatabaseConnectionProvider::admin();
     $method = $_SERVER['REQUEST_METHOD'];
-
     if ($method === 'GET') {
         $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         if ($q !== '') {
@@ -32,7 +30,7 @@ try {
         }
         echo json_encode(['success'=>true,'data'=>$stmt->fetchAll()]);
     } elseif ($method === 'POST') {
-        $in = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        $in = json_decode(file_get_contents('php://input'), true);
         $username = trim($in['username'] ?? '');
         $password = (string)($in['password'] ?? '');
         $role = trim($in['role'] ?? 'user');
@@ -46,7 +44,6 @@ try {
             $stmt = $db->prepare('INSERT INTO users (username, password_hash, role, created_at) VALUES (?,?,?,NOW())');
             $stmt->execute([$username,$hash,$role]);
             $userId = (int)$db->lastInsertId();
-            // Optional profile fields
             $p = [
                 'first_name' => trim($in['first_name'] ?? ''),
                 'last_name' => trim($in['last_name'] ?? ''),
@@ -59,33 +56,24 @@ try {
                 $ps->execute([$userId, $p['first_name'],$p['last_name'],$p['mobile'],$p['email']]);
             }
             $db->commit();
-            
-            // Log user creation
             $logger = new ActivityLogger();
-            $adminUserId = $_SESSION['user_id'] ?? 1; // Get actual admin user ID from session
+            $adminUserId = $_SESSION['user_id'] ?? 1; 
             $logger->logUserCreate($adminUserId, $userId, $username);
-            
             echo json_encode(['success'=>true,'id'=>$userId]);
         } catch (Throwable $e) {
             $db->rollBack(); throw $e;
         }
     } elseif ($method === 'PUT') {
-        $in = json_decode(file_get_contents('php://input'), true) ?: [];
-        
-        // Handle farm assignment update
+        $in = json_decode(file_get_contents('php://input'), true);
         if (isset($in['action']) && $in['action'] === 'update_farm') {
             $userId = (int)($in['user_id'] ?? 0);
             $farmId = isset($in['farm_id']) ? (int)$in['farm_id'] : null;
-            
             if ($userId <= 0) throw new Exception('user_id required');
-            
             $stmt = $db->prepare('UPDATE users SET farm_id = ? WHERE id = ?');
             $stmt->execute([$farmId, $userId]);
-            
             echo json_encode(['success' => true, 'message' => 'Farm assignment updated']);
             exit;
         }
-        
         $id = (int)($in['id'] ?? 0); if ($id<=0) throw new Exception('id required');
         $username = trim($in['username'] ?? '');
         $role = trim($in['role'] ?? 'user');
@@ -101,7 +89,6 @@ try {
                 $stmt = $db->prepare('UPDATE users SET username=?, role=? WHERE id=?');
                 $stmt->execute([$username,$role,$id]);
             }
-            // Upsert profile
             $p = [
                 'first_name' => trim($in['first_name'] ?? ''),
                 'last_name' => trim($in['last_name'] ?? ''),
@@ -118,37 +105,28 @@ try {
                 $ps->execute([$id,$p['first_name'],$p['last_name'],$p['mobile'],$p['email']]);
             }
             $db->commit();
-            
-            // Log user update
             $logger = new ActivityLogger();
-            $adminUserId = $_SESSION['user_id'] ?? 1; // Get actual admin user ID from session
+            $adminUserId = $_SESSION['user_id'] ?? 1; 
             $changes = [];
             if ($password !== '') $changes[] = 'password';
             if (!empty($p)) $changes[] = 'profile';
             $logger->logUserUpdate($adminUserId, $id, $username, $changes);
-            
             echo json_encode(['success'=>true]);
         } catch (Throwable $e) {
             $db->rollBack(); throw $e;
         }
     } elseif ($method === 'DELETE') {
-        $in = json_decode(file_get_contents('php://input'), true) ?: [];
+        $in = json_decode(file_get_contents('php://input'), true);
         $id = (int)($in['id'] ?? 0); if ($id<=0) throw new Exception('id required');
-        
-        // Get username before deletion for logging
         $userStmt = $db->prepare('SELECT username FROM users WHERE id=?');
         $userStmt->execute([$id]);
         $user = $userStmt->fetch(PDO::FETCH_ASSOC);
         $username = $user ? $user['username'] : 'Unknown';
-        
         $stmt = $db->prepare('DELETE FROM users WHERE id=?'); 
         $stmt->execute([$id]);
-        
-        // Log user deletion
         $logger = new ActivityLogger();
-        $adminUserId = $_SESSION['user_id'] ?? 1; // Get actual admin user ID from session
+        $adminUserId = $_SESSION['user_id'] ?? 1; 
         $logger->logUserDelete($adminUserId, $id, $username);
-        
         echo json_encode(['success'=>true]);
     } else {
         http_response_code(405); echo json_encode(['success'=>false,'message'=>'Method not allowed']);

@@ -24,7 +24,7 @@
             </div>
         </div>
         <div class="nav-menu">
-            <a href="login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+            <a href="../login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
         </div>
     </div>
     <div class="main-content">
@@ -35,9 +35,6 @@
                 <button id="searchBtn" class="control-btn">Search</button>
             </div>
         </div>
-
-        
-
         <div class="control-card" style="margin-top:16px;">
             <h2 class="section-title">Personal Information</h2>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
@@ -59,13 +56,11 @@
             </div>
             <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="control-btn" id="userAddBtn" style="min-width:140px;">Add</button>
-                
                 <button class="control-btn" id="userClearBtn" style="background:var(--gray-200); min-width:140px;">Clear</button>
                 <button class="control-btn" id="userUpdateBtn" style="background:var(--gray-300); min-width:140px;">Update</button>
                 <button class="control-btn" id="userDeleteBtn" style="background:var(--danger); min-width:140px;">Delete</button>
             </div>
         </div>
-
         <div class="control-card" style="margin-top:16px;">
             <h2 class="section-title">Farm Information</h2>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
@@ -95,22 +90,18 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Auth guard: only super_user should access admin
             try {
                 const u = JSON.parse(localStorage.getItem('swift_user')||'null');
-                if (!u) { window.location.href = 'login.html'; return; }
+                if (!u) { window.location.href = '../login.html'; return; }
                 if ((u.role||'').toLowerCase() !== 'super_user') { window.location.href = '../user/index.html'; return; }
-            } catch(e){ window.location.href='login.html'; return; }
+            } catch(e){ window.location.href='../login.html'; return; }
             const hour=new Date().getHours(); const s=hour<12?'Good Morning':(hour<17?'Good Afternoon':'Good Evening'); let n='Admin'; try{const st=localStorage.getItem('swift_user'); if(st){const p=JSON.parse(st); n=p.username||n;}}catch(e){}; document.getElementById('greeting').textContent=`${s}, ${n}!`;
-            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='login.html'; });});
-            // Personal section helpers
+            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='../login.html'; });});
             function clearPersonal(){ document.getElementById('firstName').value=''; document.getElementById('lastName').value=''; document.getElementById('middleName').value=''; document.getElementById('mobile').value=''; document.getElementById('email').value=''; document.getElementById('addrStreet').value=''; document.getElementById('addrBarangay').value=''; document.getElementById('addrCity').value=''; document.getElementById('addrProvince').value=''; document.getElementById('addrPostal').value=''; document.getElementById('username').value=''; document.getElementById('password').value=''; }
             document.getElementById('userClearBtn').addEventListener('click', clearPersonal);
             document.getElementById('userAddBtn').addEventListener('click', async ()=>{ try{ selectedUser=null; await upsertUserAndMaybeGetId(true); farmSelect.innerHTML="<option value=''>-- No farms --</option>"; selectedFarm=null; clearFarm(); alert('Added'); }catch(e){ alert(e.message||'Add failed'); } });
             document.getElementById('userUpdateBtn').addEventListener('click', async ()=>{ try{ if(!selectedUser){ alert('Search and load a user first'); return; } await upsertUserAndMaybeGetId(false); alert('Updated'); }catch(e){ alert(e.message||'Update failed'); } });
             document.getElementById('userDeleteBtn').addEventListener('click', async ()=>{ try{ if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; } if(!confirm('Delete this user and all related data?')) return; const res=await fetch('../php/admin_users.php',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedUser.id})}); const d=await res.json(); if(!d.success) throw new Error(d.message||'Delete failed'); clearPersonal(); farmSelect.innerHTML="<option value=''>-- No farms --</option>"; selectedUser=null; selectedFarm=null; alert('Deleted'); }catch(e){ alert(e.message||'Delete failed'); } });
-
-            // Farm section helpers
             function clearFarm(){ document.getElementById('farmName').value=''; document.getElementById('farmStreet').value=''; document.getElementById('farmBarangay').value=''; document.getElementById('farmCity').value=''; document.getElementById('farmProvince').value=''; document.getElementById('farmPostal').value=''; selectedFarm=null; }
             document.getElementById('clearBtn').addEventListener('click', ()=>{ clearFarm(); farmSelect.value=''; });
             document.getElementById('btnAddFarm').addEventListener('click', async ()=>{
@@ -118,7 +109,6 @@
                     if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; }
                     const farm_name=document.getElementById('farmName').value.trim();
                     if(!farm_name){ alert('Enter farm name'); return; }
-                    // force create (ignore selectedFarm)
                     const street=document.getElementById('farmStreet').value.trim();
                     const barangay=document.getElementById('farmBarangay').value.trim();
                     const city=document.getElementById('farmCity').value.trim();
@@ -131,7 +121,6 @@
                     alert('Added');
                 } catch(e){ alert(e.message||'Add failed'); }
             });
-
             async function upsertUserAndMaybeGetId(includePassword){
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value;
@@ -164,7 +153,6 @@
                     return newId;
                 }
             }
-
             async function upsertFarm(userId){
                 const farm_name=document.getElementById('farmName').value.trim();
                 const street=document.getElementById('farmStreet').value.trim();
@@ -172,16 +160,13 @@
                 const city=document.getElementById('farmCity').value.trim();
                 const province=document.getElementById('farmProvince').value.trim();
                 const postal=document.getElementById('farmPostal').value.trim();
-                if (!farm_name) return false; // no farm input provided
-                if (!selectedFarm) return false; // prevent accidental create from update path
+                if (!farm_name) return false;
+                if (!selectedFarm) return false;
                 const res = await fetch('../php/admin_farms.php',{ method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id:selectedFarm.id, user_id:userId, farm_name, street, barangay, city, province, postal }) });
                 const d = await res.json(); if(!d.success) throw new Error(d.message||'Update failed');
                 await loadFarmsByUser(userId, selectedFarm.id);
                 return true;
             }
-
-            // no generic Save for farm to avoid confusion with Update; Add creates, Update edits
-
             let selectedUser = null; let selectedFarm = null;
             function searchUser(){ 
                 const q=document.getElementById('globalSearch').value.trim(); 
@@ -196,8 +181,6 @@
                         const u=rows[0]; 
                         selectedUser = { id:u.id, username:u.username, role:u.role };
                         console.log('Selected user:', selectedUser);
-                        
-                        // Populate personal/account fields (all fields now exist in database)
                         document.getElementById('firstName').value = u.first_name||'';
                         document.getElementById('lastName').value = u.last_name||'';
                         document.getElementById('middleName').value = u.middle_name||'';
@@ -210,9 +193,7 @@
                         document.getElementById('addrPostal').value = u.addr_postal||'';
                         document.getElementById('username').value = u.username;
                         document.getElementById('password').value = '';
-                        
                         console.log('Loading farms for user ID:', u.id);
-                        // Load farms owned by this user
                         loadFarmsByUser(u.id);
                     })
                     .catch(e => {
@@ -222,7 +203,6 @@
             }
             document.getElementById('searchBtn').addEventListener('click', searchUser);
             document.getElementById('globalSearch').addEventListener('keydown',(e)=>{ if(e.key==='Enter') searchUser(); });
-
             const farmSelect = document.getElementById('farmSelect');
             function loadFarmsByUser(userId, preferredId) {
                 console.log('loadFarmsByUser called with userId:', userId, 'preferredId:', preferredId);
@@ -236,10 +216,8 @@
                             farmSelect.innerHTML = rows.map(f => 
                                 `<option value='${f.id}' data-name='${f.farm_name}' data-street='${f.street||''}' data-barangay='${f.barangay||''}' data-city='${f.city||''}' data-province='${f.province||''}' data-postal='${f.postal||''}'>${f.farm_name}</option>`
                             ).join('');
-                            
                             const pickId = preferredId ? String(preferredId) : String(rows[0].id);
                             farmSelect.value = pickId;
-                            
                             const sel = rows.find(r => String(r.id) === pickId) || rows[0];
                             selectedFarm = { 
                                 id: sel.id, 
@@ -250,17 +228,13 @@
                                 province: sel.province || '', 
                                 postal: sel.postal || '' 
                             };
-                            
                             console.log('Selected farm:', selectedFarm);
-                            
-                            // Populate farm form fields
                             document.getElementById('farmName').value = selectedFarm.name;
                             document.getElementById('farmStreet').value = selectedFarm.street;
                             document.getElementById('farmBarangay').value = selectedFarm.barangay;
                             document.getElementById('farmCity').value = selectedFarm.city;
                             document.getElementById('farmProvince').value = selectedFarm.province;
                             document.getElementById('farmPostal').value = selectedFarm.postal;
-                            
                             console.log('Farm fields populated:', {
                                 farmName: document.getElementById('farmName').value,
                                 farmCity: document.getElementById('farmCity').value,
@@ -298,8 +272,6 @@
                     province: opt.getAttribute('data-province'), 
                     postal: opt.getAttribute('data-postal') 
                 };
-                
-                // Populate farm form fields
                 document.getElementById('farmName').value = selectedFarm.name;
                 document.getElementById('farmStreet').value = selectedFarm.street;
                 document.getElementById('farmBarangay').value = selectedFarm.barangay;
@@ -307,7 +279,6 @@
                 document.getElementById('farmProvince').value = selectedFarm.province;
                 document.getElementById('farmPostal').value = selectedFarm.postal;
             });
-
             document.getElementById('btnUpdateFarm').addEventListener('click', async ()=>{
                 try{
                     if(!selectedUser||!selectedUser.id){ alert('Search and load a user first'); return; }
@@ -326,11 +297,7 @@
                     alert('Deleted');
                 } catch(e){ alert(e.message||'Delete failed'); }
             });
-
-            // Overview stats removed on this page
         });
     </script>
 </body>
 </html>
-
-

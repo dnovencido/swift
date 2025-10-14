@@ -2,19 +2,15 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 require_once __DIR__ . '/db.php';
-
 function tableExists(PDO $pdo, string $table): bool {
     try { $pdo->query("SELECT 1 FROM `{$table}` LIMIT 1"); return true; } catch (Throwable $e) { return false; }
 }
-
 try {
     $db = DatabaseConnectionProvider::admin();
     $type = isset($_GET['type']) ? strtolower(trim($_GET['type'])) : '';
     $status = isset($_GET['status']) ? strtolower(trim($_GET['status'])) : '';
-
     $data = [];
     if ($type === 'users' && tableExists($db, 'users')) {
-        // Exclude admin and super_user from user list, include farm information
         $stmt = $db->query('
             SELECT u.id, u.username, u.role, u.is_active, u.created_at,
                    p.first_name, p.last_name, p.mobile, p.email
@@ -24,8 +20,6 @@ try {
             ORDER BY u.created_at DESC
         ');
         $users = $stmt->fetchAll();
-        
-        // Get farms for each user
         $data = [];
         foreach ($users as $user) {
             $farmStmt = $db->prepare('SELECT id, farm_name, street, barangay, city, province, postal FROM farms WHERE user_id = ?');
@@ -47,7 +41,6 @@ try {
         $data = $stmt->fetchAll();
     } elseif ($type === 'devices' && tableExists($db, 'devices')) {
         if ($status === 'up' || $status === 'down') {
-            // Emulate NULLS LAST for MySQL by ordering NULLs as lowest using IS NULL
             $stmt = $db->prepare("
                 SELECT id, device_name, ip_address, status, last_seen, 
                        device_type, device_code,
@@ -73,12 +66,9 @@ try {
         echo json_encode(['success' => false, 'message' => 'Unknown type or missing table']);
         exit;
     }
-
     echo json_encode(['success' => true, 'type' => $type, 'status' => $status, 'data' => $data]);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
-
-

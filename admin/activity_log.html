@@ -138,9 +138,8 @@
                 <a href="activity_log.html" class="nav-item active"><i class="fas fa-history"></i><span>Activity Log</span></a>
             </div>
         </div>
-        <div class="nav-menu"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+        <div class="nav-menu"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
     </div>
-    
     <div class="main-content">
         <div class="header">
             <div class="welcome-section">
@@ -148,7 +147,6 @@
                 <h1 class="welcome-title">ACTIVITY LOG</h1>
             </div>
         </div>
-
         <div class="filter-section">
             <div class="filter-row">
                 <div class="filter-group">
@@ -181,12 +179,10 @@
                 </div>
             </div>
         </div>
-
         <div class="control-card">
             <div class="section-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                 <h2 class="section-title" style="margin:0;">Activity Log</h2>
             </div>
-            
             <div class="table-container">
                 <table class="activity-table" id="activityTable">
                     <thead>
@@ -203,7 +199,6 @@
                     </tbody>
                 </table>
             </div>
-            
             <div class="pagination" id="pagination" style="display:none;">
                 <button id="prevPage" disabled>Previous</button>
                 <span id="pageInfo">Page 1 of 1</span>
@@ -211,22 +206,16 @@
             </div>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             let currentPage = 1;
             let totalPages = 1;
             let currentFilters = {};
-
-            // Load activities on page load
             loadActivities();
-
-            // Filter event listeners
             document.getElementById('applyFilters').addEventListener('click', function() {
                 currentPage = 1;
                 loadActivities();
             });
-
             document.getElementById('clearFilters').addEventListener('click', function() {
                 document.getElementById('actionFilter').value = '';
                 document.getElementById('fromDate').value = '';
@@ -235,32 +224,25 @@
                 currentPage = 1;
                 loadActivities();
             });
-
-            // Pagination event listeners
             document.getElementById('prevPage').addEventListener('click', function() {
                 if (currentPage > 1) {
                     currentPage--;
                     loadActivities();
                 }
             });
-
             document.getElementById('nextPage').addEventListener('click', function() {
                 if (currentPage < totalPages) {
                     currentPage++;
                     loadActivities();
                 }
             });
-
-            // Search on Enter key
             document.getElementById('searchInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     currentPage = 1;
                     loadActivities();
                 }
             });
-
             function loadActivities() {
-                // Get current filters
                 currentFilters = {
                     action: document.getElementById('actionFilter').value,
                     from_date: document.getElementById('fromDate').value,
@@ -268,19 +250,14 @@
                     search: document.getElementById('searchInput').value,
                     page: currentPage
                 };
-
-                // Show loading
                 document.getElementById('activityBody').innerHTML = '<tr><td colspan="5" class="loading">Loading activities...</td></tr>';
                 document.getElementById('pagination').style.display = 'none';
-
-                // Build query string
                 const queryParams = new URLSearchParams();
                 Object.keys(currentFilters).forEach(key => {
                     if (currentFilters[key]) {
                         queryParams.append(key, currentFilters[key]);
                     }
                 });
-
                 fetch(`../php/get_activity_log.php?${queryParams.toString()}`)
                     .then(response => response.json())
                     .then(data => {
@@ -295,19 +272,15 @@
                         document.getElementById('activityBody').innerHTML = '<tr><td colspan="5" class="no-data">Error loading activities: Network error</td></tr>';
                     });
             }
-
             function displayActivities(activities) {
                 const tbody = document.getElementById('activityBody');
-                
                 if (activities.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="no-data">No activities found</td></tr>';
                     return;
                 }
-
                 tbody.innerHTML = activities.map(activity => {
                     const actionClass = getActionClass(activity.action);
                     const time = new Date(activity.created_at).toLocaleString();
-                    
                     return `
                         <tr>
                             <td class="activity-time">${time}</td>
@@ -319,7 +292,6 @@
                     `;
                 }).join('');
             }
-
             function getActionClass(action) {
                 const actionMap = {
                     'login': 'action-login',
@@ -329,45 +301,34 @@
                 };
                 return actionMap[action.toLowerCase()] || 'action-system';
             }
-
             function updatePagination(pagination) {
                 currentPage = pagination.current_page;
                 totalPages = pagination.total_pages;
-                
                 const prevBtn = document.getElementById('prevPage');
                 const nextBtn = document.getElementById('nextPage');
                 const pageInfo = document.getElementById('pageInfo');
-                
                 prevBtn.disabled = currentPage <= 1;
                 nextBtn.disabled = currentPage >= totalPages;
                 pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-                
                 if (totalPages > 1) {
                     document.getElementById('pagination').style.display = 'flex';
                 } else {
                     document.getElementById('pagination').style.display = 'none';
                 }
             }
-
-
-            // Logout functionality
             document.getElementById('logoutBtn').addEventListener('click', function(e) {
                 e.preventDefault();
                 if (confirm('Are you sure you want to logout?')) {
-                    // Clear localStorage completely
                     try { 
                         localStorage.clear(); 
                         sessionStorage.clear();
                     } catch(e) {}
-                    
-                    // Logout from server
                     fetch('../php/admin_auth.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'logout' })
                     }).finally(() => {
-                        // Force redirect to login page - use replace to prevent back button issues
-                        window.location.replace('login.html');
+                        window.location.replace('../login.html');
                     });
                 }
             });

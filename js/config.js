@@ -1,50 +1,39 @@
 /**
- * SWIFT IoT Smart Swine Farming System - Configuration
- * Version: 2.1.0 (Production Ready)
+ * SWIFT IoT System - config.js
  * 
- * Runtime configuration for the SWIFT web application
- * Contains all system settings, API endpoints, and feature flags
+ * This file contains JavaScript functionality for the SWIFT IoT Smart Swine Farming System.
+ * It handles user interface interactions, data visualization, and system control.
  * 
- * @author SWIFT Development Team
- * @version 2.1.0
- * @since 2024-01-15
+ * Features:
+ * - Real-time data updates and visualization
+ * - User interface interactions and controls
+ * - Chart and graph rendering
+ * - API communication and data handling
+ * - Error handling and user feedback
  */
 
-// Prevent multiple definitions
 if (typeof window.SWIFT_CONFIG !== 'undefined') {
     console.warn('SWIFT_CONFIG already defined. Skipping redefinition.');
 } else {
     window.SWIFT_CONFIG = {
-        // System Information
         version: '2.1.0',
         name: 'SWIFT IoT Smart Swine Farming System',
         buildDate: '2024-01-15',
-        
-        // Network Configuration
-        arduinoIP: 'http://192.168.1.16', // Arduino UNO R4 WiFi IP address
+        arduinoIP: 'http://192.168.1.11',
         apiBaseUrl: '/SWIFT/NEW_SWIFT/php',
-        
-        // API Endpoints
         endpoints: {
-            // Data endpoints
             saveRealtimeData: '/save_realtime_data.php',
             getLatestSensorData: '/get_latest_sensor_data.php',
             getHistoricalData: '/get_historical_data.php',
             getReportData: '/get_report_data.php',
-            
-            // Control endpoints
             toggleControl: '/toggle_control.php',
             updateDeviceStatus: '/update_device_status.php',
-            
-            // Admin endpoints
             adminAuth: '/admin_auth.php',
             adminLists: '/admin_lists.php',
             adminStats: '/admin_stats.php',
             adminUsers: '/admin_users.php',
             adminFarms: '/admin_farms.php',
             getActivityLog: '/get_activity_log.php',
-            
-            // API v1 endpoints
             apiV1: {
                 auth: '/api/v1/auth.php',
                 sensors: '/api/v1/sensors.php',
@@ -53,18 +42,14 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
                 weeklyReports: '/api/v1/weekly_reports.php'
             }
         },
-        
-        // Timing Configuration
         timing: {
-            dataRefreshInterval: 1000,        // 1 second
-            deviceStatusInterval: 5000,       // 5 seconds
-            chartUpdateInterval: 2000,        // 2 seconds
-            connectionTimeout: 10000,         // 10 seconds
-            retryDelay: 2000,                 // 2 seconds
+            dataRefreshInterval: 1000,        
+            deviceStatusInterval: 5000,       
+            chartUpdateInterval: 2000,        
+            connectionTimeout: 10000,         
+            retryDelay: 2000,                 
             maxRetries: 3
         },
-        
-        // Feature Flags
         features: {
             realTimeCharts: true,
             deviceControl: true,
@@ -76,8 +61,6 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
             pushNotifications: false,
             darkMode: false
         },
-        
-        // Chart Configuration
         charts: {
             defaultColors: {
                 temperature: '#ff6b6b',
@@ -90,8 +73,6 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
             responsive: true,
             maintainAspectRatio: false
         },
-        
-        // Alert Thresholds
         thresholds: {
             temperature: {
                 low: 18.0,
@@ -107,8 +88,6 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
                 critical: 5.0
             }
         },
-        
-        // UI Configuration
         ui: {
             theme: 'light',
             language: 'en',
@@ -120,16 +99,12 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
                 decimalSeparator: '.'
             }
         },
-        
-        // Security Configuration
         security: {
             enableCSRF: true,
-            sessionTimeout: 3600000, // 1 hour in milliseconds
+            sessionTimeout: 3600000, 
             maxLoginAttempts: 5,
             passwordMinLength: 8
         },
-        
-        // Performance Configuration
         performance: {
             enableCaching: true,
             cacheVersion: '6',
@@ -137,59 +112,25 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
             debounceDelay: 300,
             throttleDelay: 100
         },
-        
-        // Debug Configuration
         debug: {
             enabled: false,
-            logLevel: 'info', // debug, info, warn, error
+            logLevel: 'info', 
             showTimestamps: true,
             enableConsoleLogging: false
         },
-        
-        // Utility Methods
         utils: {
-            /**
-             * Get full API URL for an endpoint
-             * @param {string} endpoint - The endpoint path
-             * @returns {string} Full URL
-             */
             getApiUrl: function(endpoint) {
                 return this.apiBaseUrl + endpoint;
             },
-            
-            /**
-             * Get Arduino control URL
-             * @param {string} control - Control type (pump, heat, etc.)
-             * @returns {string} Full Arduino URL
-             */
             getArduinoUrl: function(control) {
                 return `${this.arduinoIP}/toggle${control}`;
             },
-            
-            /**
-             * Check if feature is enabled
-             * @param {string} feature - Feature name
-             * @returns {boolean} True if enabled
-             */
             isFeatureEnabled: function(feature) {
                 return this.features[feature] === true;
             },
-            
-            /**
-             * Get threshold value
-             * @param {string} sensor - Sensor type
-             * @param {string} level - Threshold level (low, high, critical)
-             * @returns {number} Threshold value
-             */
             getThreshold: function(sensor, level) {
                 return this.thresholds[sensor]?.[level] || 0;
             },
-            
-            /**
-             * Format number according to UI settings
-             * @param {number} value - Number to format
-             * @returns {string} Formatted number
-             */
             formatNumber: function(value) {
                 const config = this.ui.numberFormat;
                 return Number(value).toFixed(config.decimals)
@@ -197,19 +138,12 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
             }
         }
     };
-    
-    // Freeze configuration to prevent modifications
     Object.freeze(window.SWIFT_CONFIG);
     Object.freeze(window.SWIFT_CONFIG.endpoints);
     Object.freeze(window.SWIFT_CONFIG.features);
     Object.freeze(window.SWIFT_CONFIG.thresholds);
     Object.freeze(window.SWIFT_CONFIG.utils);
-    
-    // Log configuration loaded
     if (window.SWIFT_CONFIG.debug.enabled) {
         console.log('SWIFT Configuration loaded:', window.SWIFT_CONFIG);
     }
 }
-
-
-

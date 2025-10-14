@@ -4,41 +4,30 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/activity_logger.php';
-
 class Auth {
     private $db;
     public function __construct() { $this->db = DatabaseConnectionProvider::admin(); }
-
     public function login($username, $password) {
         $stmt = $this->db->prepare('SELECT id, username, password_hash, role FROM users WHERE username = ?');
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Check if password matches (support both plain text and hashed passwords)
         $passwordMatch = false;
         if ($user) {
-            // Try password_verify first (for hashed passwords)
             if (password_verify($password, $user['password_hash'])) {
                 $passwordMatch = true;
             }
-            // If that fails, try direct comparison (for plain text passwords)
             elseif ($password === $user['password_hash']) {
                 $passwordMatch = true;
             }
         }
-        
         if ($user && $passwordMatch) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
-            
-            // Log successful login
             $logger = new ActivityLogger();
             $logger->logLogin($user['id'], $user['username']);
-            
             return ['success' => true, 'role' => $user['role'], 'username' => $user['username']];
         }
         return ['success' => false, 'message' => 'Invalid username or password'];
@@ -51,7 +40,6 @@ class Auth {
         return null;
     }
     public function logout() { 
-        // Log logout before destroying session
         if ($this->isLoggedIn()) {
             $user = $this->getCurrentUser();
             $logger = new ActivityLogger();
@@ -61,18 +49,19 @@ class Auth {
         return ['success' => true]; 
     }
 }
-
 $auth = new Auth();
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'OPTIONS') { http_response_code(200); exit(); }
-
 try {
     if ($method === 'POST') {
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (stripos($contentType, 'application/json') !== false) {
             $data = json_decode(file_get_contents('php://input'), true);
         } else {
-            $data = $_POST; if (empty($data)) { parse_str(file_get_contents('php://input'), $data); }
+            $data = $_POST; 
+            if (empty($data)) { 
+                parse_str(file_get_contents('php://input'), $data); 
+            }
         }
         $action = $data['action'] ?? 'login';
         if ($action === 'login') {
@@ -91,5 +80,3 @@ try {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
-
-

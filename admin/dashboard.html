@@ -10,8 +10,8 @@
     <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
     <link rel="stylesheet" href="../css/style.css?v=1759866206" />
-    <script src="../js/?v=1759866184"></script>
-    <script src="../js/?v=1759866184"></script>
+    <script></script>
+    <script></script>
 </head>
 <body>
     <div class="sidebar">
@@ -25,11 +25,10 @@
                 <a href="activity_log.html" class="nav-item"><i class="fas fa-history"></i><span>Activity Log</span></a>
             </div>
         </div>
-        <div class="nav-menu"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+        <div class="nav-menu"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
     </div>
     <div class="main-content">
         <div class="header"><div class="welcome-section"><p class="greeting" id="greeting">&nbsp;</p><h1 class="welcome-title">DASHBOARD</h1></div></div>
-
         <div class="control-card" style="margin-top:16px;">
             <div class="transfer-cards">
                 <div class="transfer-card clickable" data-type="users"><div class="card-icon"><i class="fas fa-user"></i></div><p class="card-title">Users</p><h2 class="card-amount" id="statUsers">-</h2></div>
@@ -39,7 +38,6 @@
                 <div class="transfer-card clickable" data-type="devices" data-status="down"><div class="card-icon"><i class="fas fa-circle-xmark"></i></div><p class="card-title">Offline</p><h2 class="card-amount" id="statOffline">-</h2></div>
             </div>
         </div>
-
         <div id="listPanel" class="control-card" style="margin-top:16px; display:none;">
             <div class="section-header" style="display:flex; align-items:center; justify-content:space-between;">
                 <h2 id="listTitle" class="section-title" style="margin:0;">List</h2>
@@ -58,25 +56,18 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Auth guard: only super_user should access admin
             try {
                 const u = JSON.parse(localStorage.getItem('swift_user')||'null');
-                if (!u) { window.location.href = 'login.html'; return; }
+                if (!u) { window.location.href = '../login.html'; return; }
                 if ((u.role||'').toLowerCase() !== 'super_user') { window.location.href = '../user/index.html'; return; }
-            } catch(e){ window.location.href='login.html'; return; }
+            } catch(e){ window.location.href='../login.html'; return; }
             const hour=new Date().getHours(); const s=hour<12?'Good Morning':(hour<17?'Good Afternoon':'Good Evening'); let n='Admin'; try{const st=localStorage.getItem('swift_user'); if(st){const p=JSON.parse(st); n=p.username||n;}}catch(e){}; document.getElementById('greeting').textContent=`${s}, ${n}!`;
-            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='login.html'; });});
-            // Load initial stats with small delay to ensure DOM is ready
+            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='../login.html'; });});
             setTimeout(() => {
                 loadStats();
             }, 100);
-            
-        // Auto-refresh stats every 5 seconds for better performance
         setInterval(loadStats, 5000);
-        
-        // Auto-update device status every 5 seconds for faster offline detection
         setInterval(updateDeviceStatus, 5000);
-            
             function loadStats() {
                 fetch('../php/admin_stats.php').then(r=>r.json()).then(d=>{ 
                     if(!d||!d.success) return; 
@@ -89,7 +80,6 @@
                     set('statOffline', s.devices_down); 
                 }).catch((e)=>{
                     console.error('Failed to load stats:', e);
-                    // Set default values on error to prevent layout issues
                     const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=String(v??0);} ; 
                     set('statUsers', 0); 
                     set('statFarms', 0); 
@@ -98,18 +88,13 @@
                     set('statOffline', 0); 
                 });
             }
-            
             function updateDeviceStatus() {
-                // Update device status in background
                 fetch('../php/update_device_status.php?run=update&manual=true').then(r=>r.json()).then(d=>{
                     if(d.success) {
-                        // Reload stats after updating device status
                         loadStats();
                     }
                 }).catch(()=>{});
             }
-
-            // Card click to load lists
             document.querySelectorAll('.transfer-card.clickable').forEach(card=>{
                 card.addEventListener('click', ()=>{
                     const type = card.getAttribute('data-type');
@@ -117,16 +102,12 @@
                     loadList(type, status);
                 });
             });
-
             document.getElementById('closeList').addEventListener('click', ()=>{
                 document.getElementById('listPanel').style.display='none';
             });
-
-            // Check All Devices button
             document.getElementById('checkAllDevices').addEventListener('click', ()=>{
                 checkAllDevices();
             });
-
             function loadList(type, status){
                 const titleMap = { users:'Users', farms:'Farms', devices:'Devices', up:'Online Devices', down:'Offline Devices' };
                 const listTitle = document.getElementById('listTitle');
@@ -136,14 +117,11 @@
                 const checkAllBtn = document.getElementById('checkAllDevices');
                 head.innerHTML=''; body.innerHTML='<tr><td>Loading...</td></tr>';
                 document.getElementById('listPanel').style.display='block';
-                
-                // Show/hide Check All Devices button based on list type
                 if (type === 'devices') {
                     checkAllBtn.style.display = 'inline-block';
                 } else {
                     checkAllBtn.style.display = 'none';
                 }
-
                 const url = `../php/admin_lists.php?type=${encodeURIComponent(type)}${status?`&status=${encodeURIComponent(status)}`:''}`;
                 fetch(url).then(r=>r.json()).then(d=>{
                     if(!d||!d.success){ body.innerHTML='<tr><td>No data</td></tr>'; return; }
@@ -158,7 +136,6 @@
                                     ${farms.map(f => `<option value="${f.id}">${f.farm_name}</option>`).join('')}
                                 </select>` : 
                                 '<span style="color:#999;">No Farms</span>';
-                            
                             return `<tr>
                                 <td>${r.id}</td>
                                 <td>
@@ -183,8 +160,6 @@
                                 <td>${farmDropdown}</td>
                             </tr>`;
                         }).join('') || '<tr><td colspan="6">No users</td></tr>'; 
-                        
-                        // Add event listeners to farm dropdowns
                         document.querySelectorAll('.farm-select').forEach(select => {
                             select.addEventListener('change', (e) => {
                                 const userId = e.target.getAttribute('data-user-id');
@@ -241,8 +216,6 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                                 <td><button class="check-device-btn" data-device-id="${r.id}" data-device-ip="${r.ip_address||''}" style="background:#0A4174; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Check</button></td>
                             </tr>`;
                         }).join('') || '<tr><td colspan="11">No devices</td></tr>';
-                        
-                        // Add event listeners to individual check buttons
                         document.querySelectorAll('.check-device-btn').forEach(btn => {
                             btn.addEventListener('click', (e) => {
                                 const deviceId = e.target.getAttribute('data-device-id');
@@ -253,21 +226,16 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                     }
                 }).catch(()=>{ body.innerHTML='<tr><td>Error loading data</td></tr>'; });
             }
-
-            // Function to check all devices
             function checkAllDevices() {
                 const checkAllBtn = document.getElementById('checkAllDevices');
                 const originalText = checkAllBtn.textContent;
                 checkAllBtn.textContent = 'Checking...';
                 checkAllBtn.disabled = true;
-                
                 fetch('../php/update_device_status.php?run=update&manual=true')
                     .then(r => r.json())
                     .then(d => {
                         if (d.success) {
-                            // Reload the device list to show updated status
                             loadList('devices', '');
-                            // Reload stats
                             loadStats();
                         } else {
                             alert('Error checking devices: ' + (d.message || 'Unknown error'));
@@ -281,8 +249,6 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                         checkAllBtn.disabled = false;
                     });
             }
-            
-            // Function to get farm options for dropdown
             function getFarmOptions(selectedFarmId) {
                 if (!window.farmOptions) {
                     loadFarmOptions();
@@ -290,8 +256,6 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                 }
                 return window.farmOptions;
             }
-            
-            // Function to load farm options
             function loadFarmOptions() {
                 fetch('../php/admin_lists.php?type=farms')
                     .then(r => r.json())
@@ -306,8 +270,6 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                         window.farmOptions = '<option value="">Error loading farms</option>';
                     });
             }
-            
-            // Function to update user's farm assignment
             function updateUserFarm(userId, farmId) {
                 fetch('../php/admin_users.php', {
                     method: 'PUT',
@@ -322,7 +284,6 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                 .then(d => {
                     if (d.success) {
                         console.log('Farm assignment updated successfully');
-                        // Optionally reload the list to show updated data
                         loadList('users', '');
                     } else {
                         alert('Error updating farm assignment: ' + (d.message || 'Unknown error'));
@@ -332,23 +293,16 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                     alert('Error updating farm assignment: Network error');
                 });
             }
-            
-            // Function to check a single device
             function checkSingleDevice(deviceId, deviceIp, button) {
                 const originalText = button.textContent;
                 button.textContent = 'Checking...';
                 button.disabled = true;
-                
-                // Create a specific URL for checking a single device
                 const url = `../php/update_device_status.php?run=update&device_id=${deviceId}`;
-                
                 fetch(url)
                     .then(r => r.json())
                     .then(d => {
                         if (d.success) {
-                            // Reload the device list to show updated status
                             loadList('devices', '');
-                            // Reload stats
                             loadStats();
                         } else {
                             alert('Error checking device: ' + (d.message || 'Unknown error'));
@@ -366,5 +320,3 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
     </script>
 </body>
 </html>
-
-

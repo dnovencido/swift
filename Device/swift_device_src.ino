@@ -1,3 +1,4 @@
+
 #include <WiFiS3.h>
 #include <SPI.h>
 #include <SD.h>
@@ -8,17 +9,23 @@
 
 #define DHT_PIN 2
 #define MQ137_PIN A0
-#define RELAY_PUMP_PIN 3
-#define RELAY_HEAT_PIN 4
+// 8-Channel Relay Module Configuration
+#define RELAY_PUMP_PIN 3    // Channel 1 - Pump Relay (D3)
+#define RELAY_HEAT_PIN 4    // Channel 2 - Heat Relay (D4)
+// Available for future expansion:
+// #define RELAY_CH4_PIN 5  // Channel 4
+// #define RELAY_CH5_PIN 6  // Channel 5
+// #define RELAY_CH6_PIN 7  // Channel 6
+// #define RELAY_CH7_PIN 8  // Channel 7
+// #define RELAY_CH8_PIN 9  // Channel 8
 #define SD_CS_PIN 10
 #define LCD_SDA_PIN A4
-#define LCD_SCL_PIN A5
+#define LCD_SCL_PIN A5w+
 
 DHT dht(DHT_PIN, DHT22);
 Adafruit_AMG88xx amg;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// Time management variables
 unsigned long lastTimeSync = 0;
 unsigned long currentEpochTime = 0;
 bool timeInitialized = false;
@@ -28,8 +35,7 @@ const unsigned long MAX_TIME_SYNC_RETRIES = 10;
 const char* ssid = "PLDTHOMEFIBRa7b48";
 const char* password = "PLDTWIFIrpmj3";
 
-// Web app server configuration - CORRECTED PATH
-const char* serverHost = "192.168.1.11";  // Your computer's IP address (XAMPP server)
+const char* serverHost = "192.168.1.10";
 const int serverPort = 80;
 const char* serverPath = "/SWIFT/NEW_SWIFT/php/save_realtime_data.php";
 
@@ -41,46 +47,49 @@ const float AMMONIA_THRESHOLD = 50.0;
 bool pumpStatus = false;
 bool heatStatus = false;
 bool systemInitialized = false;
-String currentMode = "AUTO";  // Start in AUTO mode instead of INIT
+String currentMode = "AUTO";
+String previousMode = "AUTO";
+bool scheduleActive = false;
+unsigned long scheduleStartTime = 0;
+unsigned long scheduleDuration = 0;
+String deviceControlMode = "AUTO";
 
-// Runtime component status (checked during operation)
 bool dht22Active = false;
 bool mq137Active = false;
 bool amg8833Active = false;
 bool sdCardActive = false;
-bool ntpActive = false;  // Changed from rtcActive to ntpActive
+bool ntpActive = false;
 
-// HTTP client for sending data to web app
 WiFiClient wifiClient;
 unsigned long lastDataSent = 0;
-const unsigned long DATA_SEND_INTERVAL = 1000; // Send data every 1 second
+const unsigned long DATA_SEND_INTERVAL = 1000;
 
-// Web server for serving live data to dashboard
 WiFiServer server(80);
 unsigned long lastDataServed = 0;
-const unsigned long DATA_SERVE_INTERVAL = 1000; // Serve data every 1 second
+const unsigned long DATA_SERVE_INTERVAL = 1000;
 
-// Component status checking
 unsigned long lastComponentCheck = 0;
-const unsigned long COMPONENT_CHECK_INTERVAL = 5000; // Check components every 5 seconds
+const unsigned long COMPONENT_CHECK_INTERVAL = 5000;
 
-// Web app state synchronization
 unsigned long lastStateSync = 0;
-const unsigned long STATE_SYNC_INTERVAL = 10000; // Sync with web app every 10 seconds
+const unsigned long STATE_SYNC_INTERVAL = 10000;
 
-// NTP time management
 unsigned long lastNTPUpdate = 0;
-const unsigned long NTP_UPDATE_INTERVAL = 300000; // Update NTP every 5 minutes
+const unsigned long NTP_UPDATE_INTERVAL = 300000;
 
-// Schedule checking
 unsigned long lastScheduleCheck = 0;
-const unsigned long SCHEDULE_CHECK_INTERVAL = 60000; // Check schedules every 1 minute
+const unsigned long SCHEDULE_CHECK_INTERVAL = 30000;
+
+unsigned long lastSuccessfulDataSend = 0;
+unsigned long consecutiveFailures = 0;
+const unsigned long MAX_CONSECUTIVE_FAILURES = 10;
+const unsigned long DEVICE_RESET_THRESHOLD = 300000;
 
 struct ComponentStatus {
   bool dht22 = false;
   bool mq137 = false;
   bool amg8833 = false;
-  bool ntp = false;  // Changed from rtc to ntp
+  bool ntp = false;
   bool sdCard = false;
   bool lcd = false;
   bool relay = false;
@@ -94,7 +103,6 @@ struct SensorData {
   String timestamp = "";
 } sensorData;
 
-// Offline data storage for when web app is unavailable
 struct OfflineData {
   String timestamp;
   float temperature;
@@ -104,7 +112,7 @@ struct OfflineData {
   String pumpStatus;
   String heatStatus;
   String mode;
-} offlineData[100]; // Store up to 100 records
+} offlineData[100];
 int offlineDataCount = 0;
 bool webAppOnline = false;
 
@@ -114,9 +122,8 @@ void setup() {
   Serial.println("INITIALIZING COMPONENTS...");
   Serial.println();
   
-  // Initialize communication protocols
-  Wire.begin();        // Initialize I2C communication
-  SPI.begin();         // Initialize SPI communication
+  Wire.begin();
+  SPI.begin();
   
   pinMode(RELAY_PUMP_PIN, OUTPUT);
   pinMode(RELAY_HEAT_PIN, OUTPUT);
@@ -127,7 +134,6 @@ void setup() {
   connectToWiFi();
   initializeSDCard();
   
-  // Start web server for live data
   server.begin();
   Serial.println("Web server started on port 80");
   Serial.print("Dashboard can access live data at: http://");
@@ -152,13 +158,14 @@ void setup() {
 }
 
 void loop() {
+  unsigned long loopStartTime = millis();
+  
   if (!systemInitialized) {
     Serial.println("System not initialized. Please check components.");
     delay(5000);
     return;
   }
   
-  // Check WiFi connection and reconnect if needed
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi disconnected! Attempting to reconnect...");
     connectToWiFi();
@@ -167,7 +174,6 @@ void loop() {
       delay(10000);
       return;
     } else {
-      // WiFi reconnected, try time sync immediately
       if (!timeInitialized) {
         Serial.println("WiFi reconnected, attempting immediate time sync...");
         attemptTimeSync();
@@ -175,48 +181,74 @@ void loop() {
     }
   }
   
-  // Update NTP time every 5 minutes
   if (millis() - lastNTPUpdate >= NTP_UPDATE_INTERVAL) {
+    Serial.println("DEBUG: Starting NTP update...");
     updateNTPTime();
     lastNTPUpdate = millis();
+    Serial.println("DEBUG: NTP update completed");
   }
   
-  // Retry time sync if not initialized (every 10 seconds for faster sync)
   if (!timeInitialized && millis() - lastTimeSync >= 10000) {
     Serial.println("Retrying precise time sync...");
     attemptTimeSync();
     lastTimeSync = millis();
   }
   
-  // Check schedules every 1 minute
+  if (millis() - lastComponentCheck >= COMPONENT_CHECK_INTERVAL) {
+    Serial.println("DEBUG: Starting component check...");
+    checkComponentStatus();
+    lastComponentCheck = millis();
+    Serial.println("DEBUG: Component check completed");
+  }
+  
   if (millis() - lastScheduleCheck >= SCHEDULE_CHECK_INTERVAL) {
+    Serial.println("DEBUG: Starting schedule check...");
+    Serial.println("DEBUG: WiFi status: " + String(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected"));
+    Serial.println("DEBUG: Time initialized: " + String(timeInitialized ? "Yes" : "No"));
+    Serial.println("DEBUG: Components NTP: " + String(components.ntp ? "Yes" : "No"));
     checkScheduledTasks();
     lastScheduleCheck = millis();
+    Serial.println("DEBUG: Schedule check completed");
   }
   
-  // Sync with web app state every 10 seconds
   if (millis() - lastStateSync >= STATE_SYNC_INTERVAL) {
+    Serial.println("DEBUG: Starting web app state sync...");
     syncWithWebAppState();
     lastStateSync = millis();
+    Serial.println("DEBUG: Web app state sync completed");
   }
   
-  // Collect sensor data and send to web app every 1 second
   if (millis() - lastDataSent >= DATA_SEND_INTERVAL) {
+    Serial.println("DEBUG: Starting data collection cycle...");
     updateTimestamp();
     collectSensorData();
     processControlLogic();
     displaySerialMonitor();
     displayLCD();
     logToSDCard();
+    
+    unsigned long sendStartTime = millis();
     sendDataToWebApp();
+    unsigned long sendDuration = millis() - sendStartTime;
+    
+    if (sendDuration > 10000) {
+      Serial.println("WARNING: Data send took " + String(sendDuration) + "ms - possible issue");
+    }
+    
     lastDataSent = millis();
+    Serial.println("DEBUG: Data collection cycle completed");
   }
   
-  // Handle web server requests for live data
   handleWebServerRequests();
   
   processSerialCommands();
-  delay(100); // Minimal delay for responsiveness
+  
+  unsigned long loopDuration = millis() - loopStartTime;
+  if (loopDuration > 5000) {
+    Serial.println("WARNING: Main loop took " + String(loopDuration) + "ms - possible issue");
+  }
+  
+  delay(100);
 }
 
 void initializeComponents() {
@@ -247,11 +279,9 @@ void initializeComponents() {
     Serial.println("AMG8833 Thermal Camera: FAILED");
   }
   
-  // Initialize Time Client (HTTP-based) - Will retry in main loop if fails
   Serial.println("Time Client: Initializing...");
-  components.ntp = false; // Will be set to true when sync succeeds
+  components.ntp = false;
   
-  // Attempt immediate time sync if WiFi is connected
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("WiFi connected during setup, attempting immediate time sync...");
     attemptTimeSync();
@@ -289,13 +319,11 @@ void connectToWiFi() {
   Serial.print("Password: ");
   Serial.println(password);
   
-  // Check if WiFi module is available
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("✗ WiFi module not found!");
     return;
   }
   
-  // Check firmware version
   String fv = WiFi.firmwareVersion();
   Serial.print("WiFi Firmware Version: ");
   Serial.println(fv);
@@ -307,14 +335,13 @@ void connectToWiFi() {
   WiFi.begin(ssid, password);
   
   int attempts = 0;
-  int maxAttempts = 30; // Increased timeout
+  int maxAttempts = 30;
   
   while (WiFi.status() != WL_CONNECTED && attempts < maxAttempts) {
     delay(1000);
     Serial.print(".");
     attempts++;
     
-    // Print status every 5 attempts
     if (attempts % 5 == 0) {
       Serial.println();
       Serial.print("Attempt ");
@@ -396,34 +423,27 @@ void initializeSDCard() {
 }
 
 void updateTimestamp() {
-  // Using HTTP-based time sync for accurate real-time timestamp
   if (components.ntp && timeInitialized) {
-    // Calculate elapsed time since last sync
     unsigned long elapsedMs = millis() - lastTimeSync;
     unsigned long elapsedSeconds = elapsedMs / 1000;
     
-    // Add elapsed time to epoch time
     unsigned long currentTime = currentEpochTime + elapsedSeconds;
     
-    // Debug: Print epoch values
     static unsigned long lastDebugTime = 0;
-    if (millis() - lastDebugTime >= 10000) { // Debug every 10 seconds
+    if (millis() - lastDebugTime >= 10000) {
       Serial.println("DEBUG - Epoch time: " + String(currentEpochTime));
       Serial.println("DEBUG - Elapsed seconds: " + String(elapsedSeconds));
       Serial.println("DEBUG - Current time: " + String(currentTime));
       lastDebugTime = millis();
     }
     
-    // Validate epoch time (should be reasonable)
-    if (currentTime > 1000000000 && currentTime < 3000000000) { // Between 2001 and 2065
-      // Convert epoch time to DD/MM/YYYY HH:MM:SS format
+    if (currentTime > 1000000000 && currentTime < 3000000000) {
       sensorData.timestamp = formatEpochToDDMMYYYY(currentTime);
     } else {
       Serial.println("ERROR - Invalid epoch time: " + String(currentTime));
       sensorData.timestamp = "TIME_ERROR";
     }
   } else {
-    // Fallback: Use TIME_ERROR if time sync fails
     sensorData.timestamp = "TIME_ERROR";
   }
 }
@@ -441,22 +461,18 @@ void collectSensorData() {
     int rawValue = analogRead(MQ137_PIN);
     sensorData.ammonia = map(rawValue, 0, 1023, 0, 100);
   } else {
-    // Sensor not configured or detected as offline
     sensorData.ammonia = 0.0;
   }
   if (components.amg8833) {
     float pixels[AMG88xx_PIXEL_ARRAY_SIZE];
-    // Try to read pixels from thermal camera
     amg.readPixels(pixels);
     
-    // Calculate average temperature
     float sum = 0;
     for (int i = 0; i < AMG88xx_PIXEL_ARRAY_SIZE; i++) {
       sum += pixels[i];
     }
     sensorData.thermalTemp = sum / AMG88xx_PIXEL_ARRAY_SIZE;
     
-    // Debug: Print thermal temperature every 5 seconds
     static unsigned long lastThermalDebug = 0;
     if (millis() - lastThermalDebug >= 5000) {
       Serial.println();
@@ -465,31 +481,42 @@ void collectSensorData() {
       lastThermalDebug = millis();
     }
   } else {
-    // Thermal camera not configured
     sensorData.thermalTemp = 0.0;
   }
 }
 
 void processControlLogic() {
-  // Safety logic: Only enforce extreme temperature limits in MANUAL mode
-  // Allow manual control for moderate temperatures, but prevent dangerous overheating
-  if (currentMode == "MANUAL") {
-    // Only turn OFF heat if temperature is dangerously high (>35°C)
-    if (sensorData.temperature > 35.0) {
+  if (scheduleActive && scheduleDuration > 0) {
+    unsigned long currentTime = millis();
+    unsigned long elapsedMinutes = (currentTime - scheduleStartTime) / 60000;
+    
+    if (elapsedMinutes >= scheduleDuration) {
+      Serial.println("⏰ Schedule duration expired, returning to AUTO mode");
+      scheduleActive = false;
+      deviceControlMode = "AUTO";
+      currentMode = "AUTO";
+      
+      if (pumpStatus) {
+        pumpStatus = false;
+        Serial.println("✓ Pump turned OFF - schedule ended");
+      }
       if (heatStatus) {
         heatStatus = false;
-        Serial.println("⚠️ SAFETY: Heat turned OFF - dangerously high temperature (" + String(sensorData.temperature) + "°C)");
+        Serial.println("✓ Heat turned OFF - schedule ended");
       }
     }
   }
   
-  // Only apply automatic control logic if in AUTO mode
-  if (currentMode == "AUTO") {
+  if (sensorData.temperature > 35.0 && heatStatus) {
+    heatStatus = false;
+    Serial.println("⚠️ SAFETY: Heat turned OFF - dangerously high temperature (" + String(sensorData.temperature) + "°C)");
+  }
+  
+  if (deviceControlMode == "AUTO") {
     bool tempTriggeredPump = false;
     bool ammoniaTriggeredPump = false;
     bool heatTriggered = false;
     
-    // Automatic pump control based on temperature and ammonia
     if (sensorData.temperature > TEMP_HIGH_THRESHOLD) {
       pumpStatus = true;
       tempTriggeredPump = true;
@@ -499,32 +526,27 @@ void processControlLogic() {
       ammoniaTriggeredPump = true;
     }
     
-    // Automatic heat control based on temperature
     if (sensorData.temperature < TEMP_LOW_THRESHOLD) {
       heatStatus = true;
       heatTriggered = true;
     }
     
-    // Turn off pump if no triggers
     if (!tempTriggeredPump && !ammoniaTriggeredPump) {
       pumpStatus = false;
     }
     
-    // Turn off heat if no trigger
     if (!heatTriggered) {
       heatStatus = false;
     }
-    
-    // Don't change currentMode here - keep it as "AUTO" for toggle logic
+  } else if (deviceControlMode == "SCHEDULED") {
+    // In SCHEDULED mode, maintain the schedule state
+    // Don't let AUTO mode logic interfere with scheduled devices
+    // The schedule duration is handled above in the scheduleActive check
   }
-  // In MANUAL mode, pump and heat status are controlled by user via dashboard
-  // BUT extreme safety limits are still enforced above
   
-  // Apply the current pump and heat status to relays
   digitalWrite(RELAY_PUMP_PIN, pumpStatus ? HIGH : LOW);
   digitalWrite(RELAY_HEAT_PIN, heatStatus ? HIGH : LOW);
   
-  // Update LCD display when status changes
   displayLCD();
 }
 
@@ -548,7 +570,7 @@ void displaySerialMonitor() {
   Serial.println(currentMode);
   Serial.print("Water Sprinkler Status: ");
   Serial.println(pumpStatus ? "ON" : "OFF");
-  Serial.print("Heat Bulb Status: ");
+  Serial.print("Heater Status: ");
   Serial.println(heatStatus ? "ON" : "OFF");
   Serial.println("==================================================");
 }
@@ -556,9 +578,10 @@ void displaySerialMonitor() {
 void displayLCD() {
   if (!components.lcd) return;
   
+  unsigned long lcdStartTime = millis();
+  
   lcd.clear();
   
-  // First line: Sensor data
   lcd.setCursor(0, 0);
   lcd.print("T:");
   lcd.print(sensorData.temperature, 1);
@@ -567,30 +590,38 @@ void displayLCD() {
   lcd.print("|A:");
   lcd.print(sensorData.ammonia, 0);
   
-  // Second line: Status message
   lcd.setCursor(0, 1);
   String statusMessage = getLCDStatusMessage();
   lcd.print(statusMessage);
+  
+  unsigned long lcdDuration = millis() - lcdStartTime;
+  if (lcdDuration > 1000) {
+    Serial.println("WARNING: LCD update took " + String(lcdDuration) + "ms - possible LCD issue");
+    static unsigned long lcdSlowCount = 0;
+    lcdSlowCount++;
+    if (lcdSlowCount > 5) {
+      Serial.println("ERROR: LCD consistently slow - disabling LCD");
+      components.lcd = false;
+    }
+  } else {
+    static unsigned long lcdSlowCount = 0;
+    lcdSlowCount = 0;
+  }
 }
 
 String getLCDStatusMessage() {
-  // Check if both pump and heat are on
   if (pumpStatus && heatStatus) {
     return "HEAT & SPRINKLER";
   }
   
-  // Check if both pump and heat are off
   if (!pumpStatus && !heatStatus) {
     return "----ALL OFF----";
   }
   
-  // Check pump status and triggers
   if (pumpStatus) {
-    // Check if in MANUAL mode for manual control indication
     if (currentMode == "MANUAL") {
       return "SPRINKLER: MANUAL";
     }
-    // Check what triggered the pump in AUTO mode
     else if (sensorData.temperature > TEMP_HIGH_THRESHOLD) {
       return "SPRINKLER: TEMP";
     } else if (sensorData.ammonia > AMMONIA_THRESHOLD) {
@@ -600,13 +631,10 @@ String getLCDStatusMessage() {
     }
   }
   
-  // Check heat status
   if (heatStatus) {
-    // Check if in MANUAL mode for manual control indication
     if (currentMode == "MANUAL") {
       return "HEAT ON: MANUAL";
     }
-    // Check what triggered the heat in AUTO mode
     else if (sensorData.temperature < TEMP_LOW_THRESHOLD) {
       return "HEAT ON: TEMP";
     } else {
@@ -614,7 +642,6 @@ String getLCDStatusMessage() {
     }
   }
   
-  // Default fallback
   return currentMode;
 }
 
@@ -641,31 +668,47 @@ void logToSDCard() {
   }
 }
 
-void manualPumpControl(bool state) {
-  pumpStatus = state;
-  digitalWrite(RELAY_PUMP_PIN, state ? HIGH : LOW);
-  Serial.println("Manual water sprinkler control: " + String(state ? "ON" : "OFF"));
+void activateSchedule(String deviceType, unsigned long durationMinutes) {
+  previousMode = currentMode;
+  currentMode = "SCHEDULED";
+  deviceControlMode = "SCHEDULED";
+  
+  scheduleActive = true;
+  scheduleStartTime = millis();
+  scheduleDuration = durationMinutes;
+  
+  if (deviceType == "sprinkler") {
+    pumpStatus = true;
+    digitalWrite(RELAY_PUMP_PIN, HIGH);  // Immediately activate relay
+    Serial.println("✓ Schedule activated: Water Sprinkler for " + String(durationMinutes) + " minutes");
+    Serial.println("✓ Pump relay activated (8-Channel Module - Channel 1, PIN " + String(RELAY_PUMP_PIN) + " = HIGH)");
+  } else if (deviceType == "heat_bulb") {
+    heatStatus = true;
+    digitalWrite(RELAY_HEAT_PIN, HIGH);  // Immediately activate relay
+    Serial.println("✓ Schedule activated: Heater for " + String(durationMinutes) + " minutes");
+    Serial.println("✓ Heat relay activated (8-Channel Module - Channel 2, PIN " + String(RELAY_HEAT_PIN) + " = HIGH)");
+  }
+  
+  Serial.println("📅 Mode switched to SCHEDULED (Devices follow schedules)");
+  Serial.println("🔧 Schedule State: Active=" + String(scheduleActive) + ", Duration=" + String(scheduleDuration) + "min");
+  displayLCD();
 }
 
-void manualHeatControl(bool state) {
-  heatStatus = state;
-  digitalWrite(RELAY_HEAT_PIN, state ? HIGH : LOW);
-  Serial.println("Manual heat control: " + String(state ? "ON" : "OFF"));
+void deactivateSchedule() {
+  if (scheduleActive) {
+    scheduleActive = false;
+    deviceControlMode = "AUTO";
+    currentMode = "AUTO";
+    Serial.println("📅 Schedule ended - Mode returned to AUTO (Devices follow sensor logic)");
+    displayLCD();
+  }
 }
 
 void processSerialCommands() {
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
     command.trim();
-    if (command == "PUMP_ON") {
-      manualPumpControl(true);
-    } else if (command == "PUMP_OFF") {
-      manualPumpControl(false);
-    } else if (command == "HEAT_ON") {
-      manualHeatControl(true);
-    } else if (command == "HEAT_OFF") {
-      manualHeatControl(false);
-    } else if (command == "STATUS") {
+    if (command == "STATUS") {
       displaySerialMonitor();
     } else if (command == "RESET") {
       pumpStatus = false;
@@ -692,7 +735,6 @@ void processSerialCommands() {
       delay(1000);
       connectToWiFi();
     } else if (command.startsWith("SET_TIME:")) {
-      // Manual time setting: SET_TIME:2024,1,15,14,30,0
       String timeStr = command.substring(9);
       int comma1 = timeStr.indexOf(',');
       int comma2 = timeStr.indexOf(',', comma1 + 1);
@@ -750,14 +792,11 @@ void scanWiFiNetworks() {
 bool checkComponentStatus() {
   Serial.println("=== COMPONENT STATUS CHECK (Every 5 seconds) ===");
   
-  // Check DHT22 status
   bool dht22Working = components.dht22 && !isnan(dht.readTemperature()) && !isnan(dht.readHumidity());
   dht22Active = dht22Working;
   Serial.print("DHT22 Temp/Humidity: ");
   Serial.println(dht22Working ? "✓ ACTIVE" : "✗ OFFLINE");
   
-  // Check MQ137 status (ammonia sensor)
-  // Improved detection: check for sensor disconnection patterns
   bool mq137Working = false;
   int samples[10];
   int zeroCount = 0;
@@ -765,14 +804,12 @@ bool checkComponentStatus() {
   int minValue = 1023;
   int stableValue = 0;
   
-  // Declare disconnection pattern variables outside the if block
   bool allZero = false;
   bool allSame = false;
   bool stuckAtMax = false;
   bool veryUnstable = false;
   
   if (components.mq137) {
-    // Read multiple samples to detect if sensor is actually connected
     for (int i = 0; i < 10; i++) {
       samples[i] = analogRead(MQ137_PIN);
       if (samples[i] == 0) zeroCount++;
@@ -780,19 +817,12 @@ bool checkComponentStatus() {
       if (samples[i] < minValue) minValue = samples[i];
       delay(10);
     }
-    
-    // Check for disconnection patterns:
-    // 1. All readings are 0 (sensor completely disconnected)
-    // 2. All readings are identical (sensor stuck at one value)
-    // 3. Readings are at maximum (1023) - sensor disconnected but pin floating high
-    // 4. Readings are very unstable (huge variations) - poor connection
-    
+
     allZero = (zeroCount == 10);
     allSame = (maxValue == minValue);
-    stuckAtMax = (maxValue >= 1020); // Near maximum ADC value
-    veryUnstable = ((maxValue - minValue) > 800); // Huge variation indicates poor connection
+    stuckAtMax = (maxValue >= 1020);
+    veryUnstable = ((maxValue - minValue) > 800);
     
-    // Sensor is working if it shows reasonable variation and not stuck at extremes
     if (!allZero && !allSame && !stuckAtMax && !veryUnstable) {
       mq137Working = true;
     } else {
@@ -826,25 +856,18 @@ bool checkComponentStatus() {
     }
   }
   
-  // Check AMG8833 status (thermal camera)
   bool amg8833Working = false;
   
-  // Always check thermal camera status regardless of initialization flag
-  // This allows detection of disconnection even after startup
   if (components.amg8833) {
-    // Ultra-strict detection for thermal camera:
-    // Only consider it active if temperature is in a very narrow realistic range
-    // This prevents false positives when sensor is disconnected but still returning values
     
     if (sensorData.thermalTemp <= 5.0) {
-      amg8833Working = false; // Temperature <= 5°C means disconnected
+      amg8833Working = false;
     } else if (sensorData.thermalTemp >= 20 && sensorData.thermalTemp <= 40) {
-      amg8833Working = true; // Very narrow realistic room temperature range
+      amg8833Working = true;
     } else {
-      amg8833Working = false; // Everything else is considered offline
+      amg8833Working = false;
     }
   } else {
-    // Thermal camera was never initialized
     amg8833Working = false;
   }
   amg8833Active = amg8833Working;
@@ -865,19 +888,16 @@ bool checkComponentStatus() {
     }
   }
   
-  // Check SD Card status
   bool sdCardWorking = components.sdCard && SD.exists("swine_farm_log.txt");
   sdCardActive = sdCardWorking;
   Serial.print("SD Card Module: ");
   Serial.println(sdCardWorking ? "✓ ACTIVE" : "✗ OFFLINE");
   
-  // Check Time Client status
   bool timeWorking = components.ntp && timeInitialized;
   ntpActive = timeWorking;
   Serial.print("Time Client: ");
   Serial.println(timeWorking ? "✓ ACTIVE" : "✗ OFFLINE");
   
-  // Summary
   int activeComponents = (dht22Active ? 1 : 0) + (mq137Active ? 1 : 0) + 
                         (amg8833Active ? 1 : 0) + (sdCardActive ? 1 : 0) + 
                         (ntpActive ? 1 : 0);
@@ -897,7 +917,6 @@ void sendDataToWebApp() {
     return;
   }
   
-  // Prepare JSON data with timestamp
   String jsonData = "{";
   jsonData += "\"timestamp\":\"" + sensorData.timestamp + "\",";
   jsonData += "\"temp\":" + String(sensorData.temperature, 1) + ",";
@@ -922,12 +941,21 @@ void sendDataToWebApp() {
   Serial.println("DATA: " + jsonData);
   Serial.println();
   
-  // Connect to server
-  if (wifiClient.connect(serverHost, serverPort)) {
+  unsigned long connectTimeout = millis();
+  bool connected = false;
+  
+  while (millis() - connectTimeout < 3000) {
+    if (wifiClient.connect(serverHost, serverPort)) {
+      connected = true;
+      break;
+    }
+    delay(100);
+  }
+  
+  if (connected) {
     Serial.println("Connected to web app server");
     webAppOnline = true;
     
-    // Send HTTP POST request
     wifiClient.println("POST " + String(serverPath) + " HTTP/1.1");
     wifiClient.println("Host: " + String(serverHost));
     wifiClient.println("Content-Type: application/json");
@@ -936,34 +964,72 @@ void sendDataToWebApp() {
     wifiClient.println();
     wifiClient.println(jsonData);
     
-    // Wait for response
-    unsigned long timeout = millis();
-    while (wifiClient.connected() && millis() - timeout < 5000) {
+    unsigned long responseTimeout = millis();
+    bool responseReceived = false;
+    
+    while (wifiClient.connected() && millis() - responseTimeout < 5000) {
       if (wifiClient.available()) {
         String response = wifiClient.readStringUntil('\n');
         Serial.println("Response:");
         Serial.println(response);
+        responseReceived = true;
         break;
       }
     }
     
     wifiClient.stop();
-    Serial.println();
-    Serial.println("DATA SENT SUCCESSFULLY TO THE WEB APP");
-    Serial.println("==================================================");
     
-    // If we have offline data, try to sync it
-    if (offlineDataCount > 0) {
-      syncOfflineData();
+    if (responseReceived) {
+      Serial.println();
+      Serial.println("DATA SENT SUCCESSFULLY TO THE WEB APP");
+      Serial.println("==================================================");
+      
+      lastSuccessfulDataSend = millis();
+      consecutiveFailures = 0;
+      
+      if (offlineDataCount > 0) {
+        syncOfflineData();
+      }
+    } else {
+      Serial.println("✗ No response received from server");
+      storeDataOffline();
+      webAppOnline = false;
+      
+      consecutiveFailures++;
+      Serial.println("Consecutive failures: " + String(consecutiveFailures));
     }
   } else {
-    Serial.println("✗ Failed to connect to web app server");
+    Serial.println("✗ Failed to connect to web app server (timeout)");
     storeDataOffline();
     webAppOnline = false;
+    
+    consecutiveFailures++;
+    Serial.println("Consecutive failures: " + String(consecutiveFailures));
+  }
+  
+  if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+    Serial.println("WARNING: Too many consecutive failures (" + String(consecutiveFailures) + ")");
+    Serial.println("Attempting automatic recovery...");
+    
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi disconnected, attempting reconnection...");
+      connectToWiFi();
+    } else {
+      Serial.println("WiFi connected but communication failing, resetting connection...");
+      WiFi.disconnect();
+      delay(2000);
+      connectToWiFi();
+    }
+    
+    consecutiveFailures = 0;
+  }
+  
+  if (millis() - lastSuccessfulDataSend > DEVICE_RESET_THRESHOLD && lastSuccessfulDataSend > 0) {
+    Serial.println("WARNING: No successful data send for " + String((millis() - lastSuccessfulDataSend) / 1000) + " seconds");
+    Serial.println("Consider checking network connection or restarting device");
   }
 }
 
-// Store data offline when web app is unavailable
 void storeDataOffline() {
   if (offlineDataCount >= 100) {
     Serial.println("Offline storage full! Cannot store more data.");
@@ -983,14 +1049,12 @@ void storeDataOffline() {
   Serial.println("Data stored offline. Count: " + String(offlineDataCount));
 }
 
-// Sync offline data when web app comes back online
 void syncOfflineData() {
   if (offlineDataCount == 0) return;
   
   Serial.println("Syncing " + String(offlineDataCount) + " offline records...");
   
   for (int i = 0; i < offlineDataCount; i++) {
-    // Prepare JSON data for offline record
     String jsonData = "{";
     jsonData += "\"timestamp\":\"" + offlineData[i].timestamp + "\",";
     jsonData += "\"temp\":" + String(offlineData[i].temperature, 1) + ",";
@@ -1003,7 +1067,6 @@ void syncOfflineData() {
     jsonData += "\"mode\":\"" + offlineData[i].mode + "\"";
     jsonData += "}";
     
-    // Send offline data to web app
     WiFiClient syncClient;
     if (syncClient.connect(serverHost, serverPort)) {
       syncClient.println("POST " + String(serverPath) + " HTTP/1.1");
@@ -1014,7 +1077,6 @@ void syncOfflineData() {
       syncClient.println();
       syncClient.println(jsonData);
       
-      // Wait for response
       unsigned long timeout = millis();
       while (syncClient.connected() && millis() - timeout < 3000) {
         if (syncClient.available()) {
@@ -1025,50 +1087,57 @@ void syncOfflineData() {
       syncClient.stop();
       
       Serial.println("Synced offline record " + String(i + 1) + "/" + String(offlineDataCount));
-      delay(100); // Small delay between requests
+      delay(100);
     } else {
       Serial.println("Failed to sync offline record " + String(i + 1));
-      break; // Stop syncing if connection fails
+      break;
     }
   }
   
-  // Clear offline data after successful sync
   offlineDataCount = 0;
   Serial.println("✓ All offline data synced successfully!");
 }
 
 void syncWithWebAppState() {
   if (WiFi.status() != WL_CONNECTED) {
-    return; // Skip sync if WiFi is not connected
+    return;
   }
   
   Serial.println("=== Syncing with Web App State (Every 10 seconds) ===");
   
-  // Create HTTP client for web app communication
   WiFiClient syncClient;
   
-  if (syncClient.connect(serverHost, serverPort)) {
-    // Request current state from web app
+  unsigned long connectTimeout = millis();
+  bool connected = false;
+  
+  while (millis() - connectTimeout < 3000) {
+    if (syncClient.connect(serverHost, serverPort)) {
+      connected = true;
+      break;
+    }
+    delay(100);
+  }
+  
+  if (connected) {
     String request = "GET /SWIFT/NEW_SWIFT/php/get_latest_sensor_data.php HTTP/1.1\r\n";
     request += "Host: " + String(serverHost) + "\r\n";
     request += "Connection: close\r\n\r\n";
     
     syncClient.print(request);
     
-    // Wait for response
-    unsigned long timeout = millis();
-    while (syncClient.connected() && millis() - timeout < 5000) {
+    unsigned long responseTimeout = millis();
+    bool responseReceived = false;
+    
+    while (syncClient.connected() && millis() - responseTimeout < 5000) {
       if (syncClient.available()) {
         String response = syncClient.readStringUntil('\n');
         
-        // Look for JSON data in response
         if (response.indexOf("{") != -1) {
           String jsonData = response;
-          while (syncClient.available()) {
+          while (syncClient.available() && millis() - responseTimeout < 5000) {
             jsonData += syncClient.readStringUntil('\n');
           }
           
-          // Parse JSON response (simplified parsing)
           if (jsonData.indexOf("\"mode\":\"AUTO\"") != -1 && currentMode != "AUTO") {
             currentMode = "AUTO";
             Serial.println("✓ Mode synced to AUTO from web app");
@@ -1079,7 +1148,6 @@ void syncWithWebAppState() {
             displayLCD();
           }
           
-          // Sync pump status
           if (jsonData.indexOf("\"pump_temp\":\"ON\"") != -1 && !pumpStatus) {
             pumpStatus = true;
             digitalWrite(RELAY_PUMP_PIN, HIGH);
@@ -1090,7 +1158,6 @@ void syncWithWebAppState() {
             Serial.println("✓ Pump synced to OFF from web app");
           }
           
-          // Sync heat status
           if (jsonData.indexOf("\"heat\":\"ON\"") != -1 && !heatStatus) {
             heatStatus = true;
             digitalWrite(RELAY_HEAT_PIN, HIGH);
@@ -1101,15 +1168,21 @@ void syncWithWebAppState() {
             Serial.println("✓ Heat synced to OFF from web app");
           }
           
+          responseReceived = true;
           break;
         }
       }
     }
     
     syncClient.stop();
-    Serial.println("✓ Web app state sync completed");
+    
+    if (responseReceived) {
+      Serial.println("✓ Web app state sync completed");
+    } else {
+      Serial.println("✗ Web app state sync timeout - no response received");
+    }
   } else {
-    Serial.println("✗ Failed to connect to web app for state sync");
+    Serial.println("✗ Failed to connect to web app for state sync (timeout)");
   }
 }
 
@@ -1127,14 +1200,12 @@ void handleWebServerRequests() {
         
         if (c == '\n') {
           if (request.indexOf("GET /data") != -1) {
-            // Serve live sensor data as JSON
             client.println("HTTP/1.1 200 OK");
             client.println("Content-Type: application/json");
             client.println("Access-Control-Allow-Origin: *");
             client.println("Connection: close");
             client.println();
             
-            // Create JSON response with current sensor data
             client.print("{");
             client.print("\"temp\":");
             client.print(sensorData.temperature);
@@ -1149,7 +1220,11 @@ void handleWebServerRequests() {
             client.print(heatStatus ? "ON" : "OFF");
             client.print("\",\"mode\":\"");
             client.print(currentMode);
-            client.print("\",\"timestamp\":\"");
+            client.print("\",\"device_control_mode\":\"");
+            client.print(deviceControlMode);
+            client.print("\",\"schedule_active\":");
+            client.print(scheduleActive ? "true" : "false");
+            client.print(",\"timestamp\":\"");
             client.print(sensorData.timestamp);
             client.print("\",\"thermal\":");
             client.print(sensorData.thermalTemp);
@@ -1165,77 +1240,31 @@ void handleWebServerRequests() {
             
             Serial.println("✓ Live data served to dashboard");
             break;
-          } else if (request.indexOf("GET /togglepump") != -1) {
-            // Toggle pump control (only in MANUAL mode)
-            if (currentMode == "MANUAL" || currentMode == "INIT") {
-              pumpStatus = !pumpStatus;
-              digitalWrite(RELAY_PUMP_PIN, pumpStatus ? HIGH : LOW);
-              
-              // Update LCD display
-              displayLCD();
-              
-              client.println("HTTP/1.1 200 OK");
-              client.println("Content-Type: application/json");
-              client.println("Access-Control-Allow-Origin: *");
-              client.println("Connection: close");
-              client.println();
-            client.print("{\"status\":\"success\",\"pump\":\"");
-            client.print(pumpStatus ? "ON" : "OFF");
-            client.println("\"}");
+          } else if (request.indexOf("GET /schedule") != -1) {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-Type: application/json");
+            client.println("Access-Control-Allow-Origin: *");
+            client.println("Connection: close");
+            client.println();
             
-            Serial.println("✓ Water sprinkler toggled manually: " + String(pumpStatus ? "ON" : "OFF"));
-            } else {
-              client.println("HTTP/1.1 403 Forbidden");
-              client.println("Content-Type: application/json");
-              client.println("Access-Control-Allow-Origin: *");
-              client.println("Connection: close");
-              client.println();
-              client.println("{\"status\":\"error\",\"message\":\"Water sprinkler control only available in MANUAL mode\"}");
-              
-              Serial.println("✗ Water sprinkler control blocked - not in MANUAL mode");
+            unsigned long elapsedMinutes = 0;
+            unsigned long remainingMinutes = 0;
+            if (scheduleActive && scheduleDuration > 0) {
+              elapsedMinutes = (millis() - scheduleStartTime) / 60000;
+              remainingMinutes = scheduleDuration > elapsedMinutes ? scheduleDuration - elapsedMinutes : 0;
             }
+            
+            client.print("{\"status\":\"success\",");
+            client.print("\"schedule_active\":" + String(scheduleActive ? "true" : "false") + ",");
+            client.print("\"current_mode\":\"" + currentMode + "\",");
+            client.print("\"schedule_duration\":" + String(scheduleDuration) + ",");
+            client.print("\"elapsed_minutes\":" + String(elapsedMinutes) + ",");
+            client.print("\"remaining_minutes\":" + String(remainingMinutes));
+            client.println("}");
+            
+            Serial.println("✓ Schedule status requested");
             break;
-          } else if (request.indexOf("GET /toggleheat") != -1) {
-            // Toggle heat control (only in MANUAL mode)
-            if (currentMode == "MANUAL" || currentMode == "INIT") {
-              heatStatus = !heatStatus;
-              digitalWrite(RELAY_HEAT_PIN, heatStatus ? HIGH : LOW);
-              
-              // Update LCD display
-              displayLCD();
-              
-              client.println("HTTP/1.1 200 OK");
-              client.println("Content-Type: application/json");
-              client.println("Access-Control-Allow-Origin: *");
-              client.println("Connection: close");
-              client.println();
-              client.print("{\"status\":\"success\",\"heat\":\"");
-              client.print(heatStatus ? "ON" : "OFF");
-              client.println("\"}");
-              
-              Serial.println("✓ Heat toggled manually: " + String(heatStatus ? "ON" : "OFF"));
-            } else {
-              client.println("HTTP/1.1 403 Forbidden");
-              client.println("Content-Type: application/json");
-              client.println("Access-Control-Allow-Origin: *");
-              client.println("Connection: close");
-              client.println();
-              client.println("{\"status\":\"error\",\"message\":\"Heat control only available in MANUAL mode\"}");
-              
-              Serial.println("✗ Heat control blocked - not in MANUAL mode");
-            }
-            break;
-          } else if (request.indexOf("GET /togglemode") != -1) {
-            // Toggle mode between MANUAL and AUTO
-            if (currentMode == "MANUAL" || currentMode == "INIT") {
-              currentMode = "AUTO";
-            } else {
-              currentMode = "MANUAL";
-            }
-            
-            // Update LCD display
-            displayLCD();
-            
+          } else if (request.indexOf("GET /mode") != -1) {
             client.println("HTTP/1.1 200 OK");
             client.println("Content-Type: application/json");
             client.println("Access-Control-Allow-Origin: *");
@@ -1243,12 +1272,12 @@ void handleWebServerRequests() {
             client.println();
             client.print("{\"status\":\"success\",\"mode\":\"");
             client.print(currentMode);
-            client.println("\"}");
+            client.print("\",\"schedule_active\":" + String(scheduleActive ? "true" : "false"));
+            client.println("}");
             
-            Serial.println("✓ Mode toggled: " + currentMode);
+            Serial.println("✓ Mode status requested: " + currentMode);
             break;
           } else if (request.indexOf("GET /status") != -1) {
-            // Return current device status and settings
             client.println("HTTP/1.1 200 OK");
             client.println("Content-Type: application/json");
             client.println("Access-Control-Allow-Origin: *");
@@ -1281,7 +1310,6 @@ void handleWebServerRequests() {
             Serial.println("✓ Status requested - sent device state");
             break;
           } else if (request.indexOf("GET /setmode") != -1) {
-            // Set mode directly (e.g., /setmode?mode=AUTO or /setmode?mode=MANUAL)
             int modeIndex = request.indexOf("mode=");
             if (modeIndex != -1) {
               String newMode = request.substring(modeIndex + 5);
@@ -1317,7 +1345,6 @@ void handleWebServerRequests() {
             }
             break;
           } else if (request.indexOf("GET /setpump") != -1) {
-            // Set pump status directly (only in MANUAL mode)
             if (currentMode == "MANUAL" || currentMode == "INIT") {
               int statusIndex = request.indexOf("status=");
               if (statusIndex != -1) {
@@ -1369,7 +1396,6 @@ void handleWebServerRequests() {
             }
             break;
           } else if (request.indexOf("GET /setheat") != -1) {
-            // Set heat status directly (only in MANUAL mode)
             if (currentMode == "MANUAL" || currentMode == "INIT") {
               int statusIndex = request.indexOf("status=");
               if (statusIndex != -1) {
@@ -1421,7 +1447,6 @@ void handleWebServerRequests() {
             }
             break;
           } else {
-            // Serve basic info page
             client.println("HTTP/1.1 200 OK");
             client.println("Content-Type: text/html");
             client.println("Connection: close");
@@ -1460,7 +1485,6 @@ void handleWebServerRequests() {
   }
 }
 
-// Attempt time sync with retry logic
 void attemptTimeSync() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected, skipping time sync");
@@ -1469,30 +1493,27 @@ void attemptTimeSync() {
   
   Serial.println("Attempting time sync (attempt " + String(timeSyncRetryCount + 1) + "/" + String(MAX_TIME_SYNC_RETRIES) + ")");
   
-  // Try WorldTimeAPI first
   if (syncTimeFromServer()) {
     components.ntp = true;
     timeInitialized = true;
-    timeSyncRetryCount = 0; // Reset retry count on success
+    timeSyncRetryCount = 0;
     Serial.println("✓ Time Client: OK");
     Serial.print("Current time: ");
     Serial.println(getFormattedTime());
     return;
   }
   
-  // Fallback: Try local server
   Serial.println("WorldTimeAPI failed, trying local server...");
   if (syncTimeFromLocalServer()) {
     components.ntp = true;
     timeInitialized = true;
-    timeSyncRetryCount = 0; // Reset retry count on success
+    timeSyncRetryCount = 0;
     Serial.println("✓ Time Client: OK (Local Server)");
     Serial.print("Current time: ");
     Serial.println(getFormattedTime());
     return;
   }
   
-  // All methods failed
   timeSyncRetryCount++;
   Serial.println("✗ Time sync failed (attempt " + String(timeSyncRetryCount) + "/" + String(MAX_TIME_SYNC_RETRIES) + ")");
   
@@ -1501,18 +1522,15 @@ void attemptTimeSync() {
   }
 }
 
-// Time sync function
 void updateNTPTime() {
   if (WiFi.status() == WL_CONNECTED) {
     if (timeInitialized) {
-      // Update existing time sync
       if (syncTimeFromServer()) {
         Serial.println("✓ Time updated: " + getFormattedTime());
       } else {
         Serial.println("✗ Time update failed");
       }
     } else {
-      // Try to initialize time sync
       attemptTimeSync();
     }
   } else {
@@ -1522,32 +1540,32 @@ void updateNTPTime() {
   }
 }
 
-// Schedule checking function
 void checkScheduledTasks() {
-  if (!components.ntp || WiFi.status() != WL_CONNECTED) {
-    Serial.println("Skipping schedule check - Time sync or WiFi not available");
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Skipping schedule check - WiFi not available");
     return;
   }
   
-  // Get current time
+  if (!timeInitialized) {
+    Serial.println("Skipping schedule check - Time not initialized");
+    return;
+  }
+  
   unsigned long currentTime = currentEpochTime + (millis() - lastTimeSync) / 1000;
   struct tm *ptm = gmtime((time_t *)&currentTime);
   
   int currentHour = ptm->tm_hour;
   int currentMinute = ptm->tm_min;
-  int currentDayOfWeek = ptm->tm_wday; // 0=Sunday, 1=Monday, etc.
+  int currentDayOfWeek = ptm->tm_wday;
   
-  // Convert to day names
   String dayNames[] = {"sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"};
   String currentDayName = dayNames[currentDayOfWeek];
   
-  // Format current time for comparison
   String currentTimeStr = String(currentHour) + ":" + String(currentMinute);
   if (currentMinute < 10) {
     currentTimeStr = String(currentHour) + ":0" + String(currentMinute);
   }
   
-  // Format current date
   char dateBuffer[11];
   sprintf(dateBuffer, "%04d-%02d-%02d", 
           ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday);
@@ -1555,15 +1573,30 @@ void checkScheduledTasks() {
   
   Serial.println("Checking schedules for " + currentTimeStr + " on " + currentDayName);
   
-  // Check schedules via server API
   checkServerSchedules(currentTimeStr, currentDate, currentDayName);
 }
 
-// Check server schedules
 void checkServerSchedules(String currentTime, String currentDate, String currentDay) {
   WiFiClient client;
-  if (client.connect(serverHost, serverPort)) {
+  
+  Serial.println("Checking schedules for " + currentTime + " on " + currentDay + " (" + currentDate + ")");
+  
+  unsigned long connectTimeout = millis();
+  bool connected = false;
+  
+  while (millis() - connectTimeout < 5000) {
+    if (client.connect(serverHost, serverPort)) {
+      connected = true;
+      break;
+    }
+    delay(100);
+  }
+  
+  if (connected) {
     String postData = "{\"current_time\":\"" + currentTime + "\",\"current_date\":\"" + currentDate + "\",\"current_day\":\"" + currentDay + "\"}";
+    
+    Serial.println("Sending schedule check request...");
+    Serial.println("Data: " + postData);
     
     client.println("POST /SWIFT/NEW_SWIFT/php/api/v1/device_commands.php HTTP/1.1");
     client.println("Host: " + String(serverHost));
@@ -1573,88 +1606,109 @@ void checkServerSchedules(String currentTime, String currentDate, String current
     client.println();
     client.print(postData);
     
-    // Read response
     String response = "";
-    while (client.connected()) {
+    unsigned long responseTimeout = millis();
+    bool responseReceived = false;
+    
+    while (client.connected() && millis() - responseTimeout < 10000) {
       if (client.available()) {
         response += client.readString();
+        responseReceived = true;
       }
     }
     client.stop();
     
-    // Parse JSON response (simplified parsing)
-    if (response.indexOf("\"pump_on\":true") != -1) {
-      digitalWrite(RELAY_PUMP_PIN, HIGH);
-      pumpStatus = true;
-      Serial.println("✓ Pump activated by schedule");
-    }
-    
-    if (response.indexOf("\"heat_on\":true") != -1) {
-      digitalWrite(RELAY_HEAT_PIN, HIGH);
-      heatStatus = true;
-      Serial.println("✓ Heat activated by schedule");
-    }
-    
-    if (response.indexOf("\"pump_off\":true") != -1) {
-      digitalWrite(RELAY_PUMP_PIN, LOW);
-      pumpStatus = false;
-      Serial.println("✓ Pump deactivated by schedule");
-    }
-    
-    if (response.indexOf("\"heat_off\":true") != -1) {
-      digitalWrite(RELAY_HEAT_PIN, LOW);
-      heatStatus = false;
-      Serial.println("✓ Heat deactivated by schedule");
+    if (responseReceived) {
+      Serial.println("Schedule check response received:");
+      Serial.println(response);
+      
+      if (response.indexOf("\"pump_on\":true") != -1) {
+        int durationIndex = response.indexOf("\"duration\":");
+        unsigned long duration = 30;
+        if (durationIndex != -1) {
+          String durationStr = response.substring(durationIndex + 12);
+          durationStr = durationStr.substring(0, durationStr.indexOf(","));
+          duration = durationStr.toInt();
+        }
+        
+        Serial.println("Activating sprinkler schedule for " + String(duration) + " minutes");
+        activateSchedule("sprinkler", duration);
+      }
+      
+      if (response.indexOf("\"heat_on\":true") != -1) {
+        int durationIndex = response.indexOf("\"duration\":");
+        unsigned long duration = 30;
+        if (durationIndex != -1) {
+          String durationStr = response.substring(durationIndex + 12);
+          durationStr = durationStr.substring(0, durationStr.indexOf(","));
+          duration = durationStr.toInt();
+        }
+        
+        Serial.println("Activating heat schedule for " + String(duration) + " minutes");
+        activateSchedule("heat_bulb", duration);
+      }
+      
+      if (response.indexOf("\"pump_off\":true") != -1) {
+        pumpStatus = false;
+        digitalWrite(RELAY_PUMP_PIN, LOW);
+        Serial.println("✓ Pump deactivated by schedule");
+      }
+      
+      if (response.indexOf("\"heat_off\":true") != -1) {
+        heatStatus = false;
+        digitalWrite(RELAY_HEAT_PIN, LOW);
+        Serial.println("✓ Heat deactivated by schedule");
+      }
+      
+      if (response.indexOf("\"pump_on\":true") == -1 && response.indexOf("\"heat_on\":true") == -1 && 
+          response.indexOf("\"pump_off\":true") == -1 && response.indexOf("\"heat_off\":true") == -1) {
+        Serial.println("No schedules triggered at this time");
+      }
+      
+      Serial.println("✓ Schedule check completed successfully");
+    } else {
+      Serial.println("✗ Schedule check timeout - no response received");
     }
   } else {
-    Serial.println("Failed to connect to server for schedule check");
+    Serial.println("✗ Failed to connect to server for schedule check (timeout)");
   }
 }
 
-// HTTP-based time sync function - More reliable and precise
 bool syncTimeFromServer() {
   WiFiClient client;
   
   Serial.println("Attempting precise time sync from NTP server...");
   
-  // Try multiple reliable time servers
   const char* timeServers[] = {
-    "time.nist.gov",
-    "time.google.com", 
-    "pool.ntp.org",
-    "time.windows.com"
+    "time.nist.gov"
   };
   
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 1; i++) {
     Serial.println("Trying server: " + String(timeServers[i]));
     
-    if (client.connect(timeServers[i], 13)) { // NTP port 13
+    if (client.connect(timeServers[i], 13)) {
       Serial.println("Connected to " + String(timeServers[i]));
       
-      // Read NTP time response
       String response = "";
-      unsigned long timeout = millis() + 5000; // 5 second timeout
+      unsigned long timeout = millis() + 5000;
       
       while (client.connected() && millis() < timeout) {
         if (client.available()) {
           response += client.readString();
-          if (response.length() > 100) break; // NTP response is short
+          if (response.length() > 100) break;
         }
       }
       client.stop();
       
       Serial.println("NTP Response: " + response);
       
-      // Parse NTP time format (e.g., "58873 24-01-15 14:30:25 00 0 0 123.4 UTC(NIST) *")
       if (response.length() > 20) {
-        // Extract date and time from NTP response
         int dateStart = response.indexOf("24-");
         if (dateStart != -1) {
-          String dateTime = response.substring(dateStart, dateStart + 17); // "24-01-15 14:30:25"
+          String dateTime = response.substring(dateStart, dateStart + 17);
           
           Serial.println("Extracted datetime: " + dateTime);
           
-          // Parse: "24-01-15 14:30:25"
           int year = 2000 + dateTime.substring(0, 2).toInt();
           int month = dateTime.substring(3, 5).toInt();
           int day = dateTime.substring(6, 8).toInt();
@@ -1665,9 +1719,7 @@ bool syncTimeFromServer() {
           Serial.println("Parsed: " + String(year) + "-" + String(month) + "-" + String(day) + " " + 
                         String(hour) + ":" + String(minute) + ":" + String(second));
           
-          // Validate parsed values
           if (year >= 2024 && year <= 2030 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-            // Convert to epoch time
             struct tm timeinfo;
             timeinfo.tm_year = year - 1900;
             timeinfo.tm_mon = month - 1;
@@ -1678,8 +1730,7 @@ bool syncTimeFromServer() {
             
             currentEpochTime = mktime(&timeinfo);
             
-            // Validate epoch time result
-            if (currentEpochTime != -1 && currentEpochTime > 1600000000 && currentEpochTime < 3000000000) { // Between 2020 and 2065
+            if (currentEpochTime != -1 && currentEpochTime > 1600000000 && currentEpochTime < 3000000000) {
               lastTimeSync = millis();
               timeInitialized = true;
               
@@ -1698,12 +1749,11 @@ bool syncTimeFromServer() {
       Serial.println("✗ Failed to connect to " + String(timeServers[i]));
     }
     
-    delay(1000); // Wait between attempts
+    delay(1000);
   }
   
   Serial.println("✗ All NTP servers failed, trying WorldTimeAPI...");
   
-  // Fallback to WorldTimeAPI
   if (client.connect("worldtimeapi.org", 80)) {
     Serial.println("Connected to WorldTimeAPI");
     
@@ -1713,19 +1763,18 @@ bool syncTimeFromServer() {
     client.println();
     
     String response = "";
-    unsigned long timeout = millis() + 10000; // 10 second timeout
+    unsigned long timeout = millis() + 10000;
     
     while (client.connected() && millis() < timeout) {
       if (client.available()) {
         response += client.readString();
-        if (response.length() > 2000) break; // Prevent memory overflow
+        if (response.length() > 2000) break;
       }
     }
     client.stop();
     
     Serial.println("WorldTimeAPI response length: " + String(response.length()));
     
-    // Parse JSON response for datetime
     int datetimeIndex = response.indexOf("\"datetime\":\"");
     if (datetimeIndex != -1) {
       int startIndex = datetimeIndex + 12;
@@ -1734,7 +1783,6 @@ bool syncTimeFromServer() {
       
       Serial.println("Found datetime: " + datetime);
       
-      // Parse datetime: 2024-01-15T14:30:25.123456+08:00
       if (datetime.length() >= 19) {
         int year = datetime.substring(0, 4).toInt();
         int month = datetime.substring(5, 7).toInt();
@@ -1746,9 +1794,7 @@ bool syncTimeFromServer() {
         Serial.println("Parsed time: " + String(year) + "-" + String(month) + "-" + String(day) + " " + 
                       String(hour) + ":" + String(minute) + ":" + String(second));
         
-        // Validate parsed values
         if (year >= 2024 && year <= 2030 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-          // Convert to epoch time
           struct tm timeinfo;
           timeinfo.tm_year = year - 1900;
           timeinfo.tm_mon = month - 1;
@@ -1759,8 +1805,7 @@ bool syncTimeFromServer() {
           
           currentEpochTime = mktime(&timeinfo);
           
-          // Validate epoch time result
-          if (currentEpochTime != -1 && currentEpochTime > 1600000000 && currentEpochTime < 3000000000) { // Between 2020 and 2065
+          if (currentEpochTime != -1 && currentEpochTime > 1600000000 && currentEpochTime < 3000000000) {
             lastTimeSync = millis();
             timeInitialized = true;
             
@@ -1787,12 +1832,10 @@ bool syncTimeFromServer() {
   return false;
 }
 
-// Get formatted time string
 String getFormattedTime() {
   if (timeInitialized) {
     unsigned long currentTime = currentEpochTime + (millis() - lastTimeSync) / 1000;
     
-    // Validate epoch time
     if (currentTime > 1000000000 && currentTime < 3000000000) {
       return formatEpochToDDMMYYYY(currentTime);
     } else {
@@ -1802,25 +1845,20 @@ String getFormattedTime() {
   return "TIME_ERROR";
 }
 
-// Custom epoch to DD/MM/YYYY HH:MM:SS conversion (reliable for Arduino UNO R4 WiFi)
 String formatEpochToDDMMYYYY(unsigned long epoch) {
-  // Apply Philippines timezone offset (UTC+8)
   const int TIMEZONE_OFFSET_HOURS = 8;
-  epoch += (TIMEZONE_OFFSET_HOURS * 3600); // Add 8 hours in seconds
+  epoch += (TIMEZONE_OFFSET_HOURS * 3600);
   
-  // Constants for time calculation
   const unsigned long SECONDS_PER_MINUTE = 60;
   const unsigned long SECONDS_PER_HOUR = 3600;
   const unsigned long SECONDS_PER_DAY = 86400;
-  const unsigned long SECONDS_PER_YEAR = 31536000; // 365 days
-  const unsigned long SECONDS_PER_LEAP_YEAR = 31622400; // 366 days
+  const unsigned long SECONDS_PER_YEAR = 31536000;
+  const unsigned long SECONDS_PER_LEAP_YEAR = 31622400;
   
-  // Calculate year
   unsigned long remainingSeconds = epoch;
-  int year = 1970; // Unix epoch starts at 1970
+  int year = 1970;
   
   while (remainingSeconds >= SECONDS_PER_YEAR) {
-    // Check if current year is a leap year
     bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     unsigned long yearSeconds = isLeapYear ? SECONDS_PER_LEAP_YEAR : SECONDS_PER_YEAR;
     
@@ -1832,50 +1870,42 @@ String formatEpochToDDMMYYYY(unsigned long epoch) {
     }
   }
   
-  // Calculate month and day
   int month = 1;
   int day = 1;
   
-  // Days in each month
   int daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
   
-  // Check if current year is a leap year
   bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
   if (isLeapYear) {
-    daysInMonth[1] = 29; // February has 29 days in leap year
+    daysInMonth[1] = 29;
   }
   
-  // Calculate month
   while (month <= 12 && remainingSeconds >= (daysInMonth[month-1] * SECONDS_PER_DAY)) {
     remainingSeconds -= daysInMonth[month-1] * SECONDS_PER_DAY;
     month++;
   }
   
-  // Calculate day
   day += remainingSeconds / SECONDS_PER_DAY;
   remainingSeconds %= SECONDS_PER_DAY;
   
-  // Calculate time
   int hour24 = remainingSeconds / SECONDS_PER_HOUR;
   remainingSeconds %= SECONDS_PER_HOUR;
   int minute = remainingSeconds / SECONDS_PER_MINUTE;
   int second = remainingSeconds % SECONDS_PER_MINUTE;
   
-  // Convert to 12-hour format with AM/PM
   int hour12 = hour24;
   String ampm = "AM";
   
   if (hour24 == 0) {
-    hour12 = 12; // 12 AM
+    hour12 = 12;
   } else if (hour24 == 12) {
-    hour12 = 12; // 12 PM
+    hour12 = 12;
     ampm = "PM";
   } else if (hour24 > 12) {
-    hour12 = hour24 - 12; // 1 PM to 11 PM
+    hour12 = hour24 - 12;
     ampm = "PM";
   }
   
-  // Format as DD/MM/YYYY HH:MM:SS AM/PM
   char timestampBuffer[25];
   sprintf(timestampBuffer, "%02d/%02d/%04d %02d:%02d:%02d %s",
           day, month, year, hour12, minute, second, ampm.c_str());
@@ -1883,7 +1913,6 @@ String formatEpochToDDMMYYYY(unsigned long epoch) {
   return String(timestampBuffer);
 }
 
-// Fallback: Sync time from local server - More precise
 bool syncTimeFromLocalServer() {
   WiFiClient client;
   
@@ -1898,7 +1927,7 @@ bool syncTimeFromLocalServer() {
     client.println();
     
     String response = "";
-    unsigned long timeout = millis() + 5000; // 5 second timeout
+    unsigned long timeout = millis() + 5000;
     
     while (client.connected() && millis() < timeout) {
       if (client.available()) {
@@ -1910,7 +1939,6 @@ bool syncTimeFromLocalServer() {
     
     Serial.println("Local server response length: " + String(response.length()));
     
-    // Look for epoch time in response
     int epochIndex = response.indexOf("\"epoch\":");
     if (epochIndex != -1) {
       int startIndex = epochIndex + 8;
@@ -1924,8 +1952,7 @@ bool syncTimeFromLocalServer() {
       
       unsigned long epochValue = epochStr.toInt();
       
-      // Validate epoch time
-      if (epochValue > 1600000000 && epochValue < 3000000000) { // Between 2020 and 2065
+      if (epochValue > 1600000000 && epochValue < 3000000000) {
         currentEpochTime = epochValue;
         lastTimeSync = millis();
         timeInitialized = true;
@@ -1947,7 +1974,6 @@ bool syncTimeFromLocalServer() {
   return false;
 }
 
-// Manual time setting (last resort)
 void setManualTime(int year, int month, int day, int hour, int minute, int second) {
   struct tm timeinfo;
   timeinfo.tm_year = year - 1900;

@@ -1,14 +1,11 @@
 <?php
-// Device Commands API - Handles schedule checking and command generation
-// File: php/api/v1/device_commands.php
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
@@ -16,23 +13,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../../config.php';
 require_once '../../db.php';
 
-// Initialize response
 $response = ['success' => false, 'message' => '', 'commands' => []];
 
 try {
-    // Get database connection
     $pdo = DatabaseConnectionProvider::client();
     
     $method = $_SERVER['REQUEST_METHOD'];
     $input = json_decode(file_get_contents('php://input'), true);
     
     if ($method === 'POST') {
-        // Get current time from Arduino or use server time
         $currentTime = $input['current_time'] ?? date('H:i');
         $currentDate = $input['current_date'] ?? date('Y-m-d');
         $currentDay = $input['current_day'] ?? strtolower(date('l'));
         
-        // Check for scheduled tasks
         $commands = checkScheduledTasks($pdo, $currentTime, $currentDate, $currentDay);
         
         $response['success'] = true;
@@ -57,24 +50,25 @@ try {
 
 echo json_encode($response);
 
-// Function to check scheduled tasks
 function checkScheduledTasks($pdo, $currentTime, $currentDate, $currentDay) {
     $commands = [
         'pump_on' => false,
         'pump_off' => false,
         'heat_on' => false,
-        'heat_off' => false
+        'heat_off' => false,
+        'duration' => 30
     ];
     
     try {
-        // Get all active schedules
         $sql = "SELECT 
                     id,
                     device_type,
                     schedule_time,
                     repeat_type,
                     custom_days,
-                    schedule_date
+                    schedule_date,
+                    duration_minutes,
+                    last_executed
                 FROM device_schedules 
                 WHERE is_active = 1 
                 ORDER BY schedule_time ASC";
@@ -84,25 +78,21 @@ function checkScheduledTasks($pdo, $currentTime, $currentDate, $currentDay) {
         $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         foreach ($schedules as $schedule) {
-            // Check if this schedule should execute now
             if (shouldExecuteSchedule($schedule, $currentTime, $currentDate, $currentDay)) {
-                // Generate appropriate command
                 if ($schedule['device_type'] === 'sprinkler') {
                     $commands['pump_on'] = true;
-                    error_log("Schedule executed: Sprinkler at " . $currentTime);
+                    $commands['duration'] = $schedule['duration_minutes'] ?? 30;
+                    error_log("Schedule executed: Sprinkler at " . $currentTime . " for " . $commands['duration'] . " minutes");
                 } elseif ($schedule['device_type'] === 'heat_bulb') {
                     $commands['heat_on'] = true;
-                    error_log("Schedule executed: Heat Bulb at " . $currentTime);
+                    $commands['duration'] = $schedule['duration_minutes'] ?? 30;
+                    error_log("Schedule executed: Heater at " . $currentTime . " for " . $commands['duration'] . " minutes");
                 }
                 
-                // Log the execution
                 logScheduleExecution($pdo, $schedule['id'], $currentTime, $currentDate);
             }
         }
-        
-        // Check for scheduled OFF times (optional - you can add this logic)
-        // For now, we'll let the Arduino handle turning off devices after a certain duration
-        
+
     } catch (Exception $e) {
         error_log('Error checking schedules: ' . $e->getMessage());
     }
@@ -110,33 +100,44 @@ function checkScheduledTasks($pdo, $currentTime, $currentDate, $currentDay) {
     return $commands;
 }
 
-// Function to determine if a schedule should execute
 function shouldExecuteSchedule($schedule, $currentTime, $currentDate, $currentDay) {
-    // Check if time matches
-    if ($schedule['schedule_time'] !== $currentTime) {
+    $scheduleTime = $schedule['schedule_time'];
+    $currentTimeObj = new DateTime($currentTime);
+    $scheduleTimeObj = new DateTime($scheduleTime);
+    
+    $diff = $currentTimeObj->diff($scheduleTimeObj);
+    $diffMinutes = $diff->h * 60 + $diff->i;
+    
+    // Allow 15-minute tolerance window for schedule execution
+    if ($diffMinutes > 15) {
         return false;
     }
     
-    // Check repeat type
+    $lastExecuted = $schedule['last_executed'] ?? null;
+    if ($lastExecuted) {
+        $lastExecutedDate = date('Y-m-d', strtotime($lastExecuted));
+        if ($lastExecutedDate === $currentDate) {
+            $lastExecutedTime = date('H:i', strtotime($lastExecuted));
+            if ($lastExecutedTime === $currentTime) {
+                return false;
+            }
+        }
+    }
+    
     switch ($schedule['repeat_type']) {
         case 'once':
-            // Execute only on the exact date
             return $schedule['schedule_date'] === $currentDate;
             
         case 'daily':
-            // Execute every day
             return true;
             
         case 'weekdays':
-            // Execute Monday to Friday
             return in_array($currentDay, ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']);
             
         case 'weekends':
-            // Execute Saturday and Sunday
             return in_array($currentDay, ['saturday', 'sunday']);
             
         case 'custom':
-            // Execute on custom days
             $customDays = json_decode($schedule['custom_days'], true);
             return is_array($customDays) && in_array($currentDay, $customDays);
             
@@ -145,10 +146,18 @@ function shouldExecuteSchedule($schedule, $currentTime, $currentDate, $currentDa
     }
 }
 
-// Function to log schedule execution
 function logScheduleExecution($pdo, $scheduleId, $currentTime, $currentDate) {
     try {
-        // Update execution count
+        $getScheduleSql = "SELECT repeat_type, device_type FROM device_schedules WHERE id = :id";
+        $getScheduleStmt = $pdo->prepare($getScheduleSql);
+        $getScheduleStmt->execute([':id' => $scheduleId]);
+        $schedule = $getScheduleStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$schedule) {
+            error_log("Schedule not found for ID: " . $scheduleId);
+            return;
+        }
+        
         $sql = "UPDATE device_schedules 
                 SET execution_count = execution_count + 1,
                     last_executed = NOW(),
@@ -158,7 +167,6 @@ function logScheduleExecution($pdo, $scheduleId, $currentTime, $currentDate) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':id' => $scheduleId]);
         
-        // Log to system logs
         $logSql = "INSERT INTO system_logs (log_type, message, details, timestamp, source) 
                    VALUES ('info', 'Schedule executed', :details, NOW(), 'device_commands')";
         
@@ -167,16 +175,36 @@ function logScheduleExecution($pdo, $scheduleId, $currentTime, $currentDate) {
             ':details' => json_encode([
                 'schedule_id' => $scheduleId,
                 'execution_time' => $currentTime,
-                'execution_date' => $currentDate
+                'execution_date' => $currentDate,
+                'device_type' => $schedule['device_type']
             ])
         ]);
+        
+        if ($schedule['repeat_type'] === 'once') {
+            $deleteSql = "DELETE FROM device_schedules WHERE id = :id";
+            $deleteStmt = $pdo->prepare($deleteSql);
+            $deleteStmt->execute([':id' => $scheduleId]);
+            
+            $deleteLogSql = "INSERT INTO system_logs (log_type, message, details, timestamp, source) 
+                           VALUES ('info', 'Schedule auto-deleted', :details, NOW(), 'device_commands')";
+            
+            $deleteLogStmt = $pdo->prepare($deleteLogSql);
+            $deleteLogStmt->execute([
+                ':details' => json_encode([
+                    'schedule_id' => $scheduleId,
+                    'reason' => 'Once-type schedule completed',
+                    'device_type' => $schedule['device_type']
+                ])
+            ]);
+            
+            error_log("Schedule auto-deleted: " . $schedule['device_type'] . " schedule ID " . $scheduleId . " (once-type completed)");
+        }
         
     } catch (Exception $e) {
         error_log('Error logging schedule execution: ' . $e->getMessage());
     }
 }
 
-// Function to get device status (for debugging)
 function getDeviceStatus($pdo) {
     try {
         $sql = "SELECT 
@@ -198,4 +226,40 @@ function getDeviceStatus($pdo) {
         return null;
     }
 }
+
+function cleanupExpiredSchedules($pdo) {
+    try {
+        $sql = "DELETE FROM device_schedules 
+                WHERE end_date IS NOT NULL 
+                AND end_date < CURDATE() 
+                AND is_active = 1";
+        
+        $stmt = $pdo->prepare($sql);
+        $result = $stmt->execute();
+        $deletedCount = $stmt->rowCount();
+        
+        if ($deletedCount > 0) {
+            $logSql = "INSERT INTO system_logs (log_type, message, details, timestamp, source) 
+                       VALUES ('info', 'Expired schedules cleaned up', :details, NOW(), 'device_commands')";
+            
+            $logStmt = $pdo->prepare($logSql);
+            $logStmt->execute([
+                ':details' => json_encode([
+                    'deleted_count' => $deletedCount,
+                    'cleanup_date' => date('Y-m-d H:i:s')
+                ])
+            ]);
+            
+            error_log("Cleaned up " . $deletedCount . " expired schedules");
+        }
+        
+        return $deletedCount;
+        
+    } catch (Exception $e) {
+        error_log('Error cleaning up expired schedules: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+cleanupExpiredSchedules($pdo);
 ?>

@@ -1,19 +1,11 @@
 <?php
-/**
- * Complete System Cache Clearing Script
- * Clears all cache files and resets system state
- */
-
 echo "🧹 SWIFT System Cache Clearing Script\n";
 echo "=====================================\n\n";
-
-// Clear data cache files
 $cacheFiles = [
     '../php/data/sensor_buffer.txt',
     '../php/data/transfer_state.json', 
     '../php/data/transfer.log'
 ];
-
 echo "📁 Clearing Data Cache Files:\n";
 foreach ($cacheFiles as $file) {
     if (file_exists($file)) {
@@ -23,8 +15,6 @@ foreach ($cacheFiles as $file) {
         echo "⚠️  Not found: $file\n";
     }
 }
-
-// Reset transfer state
 $transferState = [
     'lastTransfer' => 0,
     'totalTransferred' => 0,
@@ -33,15 +23,12 @@ $transferState = [
 ];
 file_put_contents('../php/data/transfer_state.json', json_encode($transferState));
 echo "✅ Reset transfer state\n\n";
-
-// Clear any temporary files
 $tempFiles = glob('../php/data/*.tmp');
 echo "🗑️  Clearing Temporary Files:\n";
 foreach ($tempFiles as $file) {
     unlink($file);
     echo "✅ Deleted: " . basename($file) . "\n";
 }
-
 echo "\n🎯 Cache Clearing Complete!\n";
 echo "============================\n";
 echo "✅ All data cache files cleared\n";

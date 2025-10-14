@@ -1,21 +1,25 @@
 /**
- * SWIFT Service Worker Registration
- * Properly registers and manages the service worker
+ * SWIFT IoT System - swift-sw-register.js
+ * 
+ * This file contains JavaScript functionality for the SWIFT IoT Smart Swine Farming System.
+ * It handles user interface interactions, data visualization, and system control.
+ * 
+ * Features:
+ * - Real-time data updates and visualization
+ * - User interface interactions and controls
+ * - Chart and graph rendering
+ * - API communication and data handling
+ * - Error handling and user feedback
  */
 
 (function() {
     'use strict';
-    
-    // Only register service worker in supported browsers
     if (!('serviceWorker' in navigator)) {
         console.log('SWIFT: Service Worker not supported');
         return;
     }
-    
     const SW_VERSION = '1.0.0';
     const SW_URL = '../swift-service-worker.js';
-    
-    // Clear any existing service workers first
     async function clearExistingServiceWorkers() {
         try {
             const registrations = await navigator.serviceWorker.getRegistrations();
@@ -27,24 +31,17 @@
             console.error('SWIFT: Error clearing service workers', error);
         }
     }
-    
-    // Register the new service worker
     async function registerServiceWorker() {
         try {
             console.log('SWIFT: Registering service worker...');
-            
             const registration = await navigator.serviceWorker.register(SW_URL, {
                 scope: '/SWIFT/NEW_SWIFT/',
                 updateViaCache: 'none'
             });
-            
             console.log('SWIFT: Service worker registered successfully', registration.scope);
-            
-            // Handle updates
             registration.addEventListener('updatefound', () => {
                 console.log('SWIFT: Service worker update found');
                 const newWorker = registration.installing;
-                
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         console.log('SWIFT: New service worker installed, reloading page');
@@ -52,58 +49,38 @@
                     }
                 });
             });
-            
             return registration;
-            
         } catch (error) {
             console.error('SWIFT: Service worker registration failed', error);
             return null;
         }
     }
-    
-    // Initialize service worker
     async function initServiceWorker() {
         try {
-            // Clear existing service workers
             await clearExistingServiceWorkers();
-            
-            // Wait a bit for cleanup
             await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Register new service worker
             const registration = await registerServiceWorker();
-            
             if (registration) {
                 console.log('SWIFT: Service worker initialized successfully');
-                
-                // Handle service worker messages
                 navigator.serviceWorker.addEventListener('message', (event) => {
                     console.log('SWIFT: Message from service worker', event.data);
                 });
-                
-                // Handle controller change
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     console.log('SWIFT: Service worker controller changed');
                 });
             }
-            
         } catch (error) {
             console.error('SWIFT: Service worker initialization failed', error);
         }
     }
-    
-    // Only initialize on page load
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initServiceWorker);
     } else {
         initServiceWorker();
     }
-    
-    // Export for manual control
     window.SWIFT_SW = {
         init: initServiceWorker,
         clear: clearExistingServiceWorkers,
         version: SW_VERSION
     };
-    
-})();
+})();
