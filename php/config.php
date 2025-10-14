@@ -1,17 +1,27 @@
 <?php
+/**
+ * SWIFT IoT Smart Swine Farming System - Configuration
+ * Version: 2.1.0 (Production Ready)
+ * 
+ * Database configuration and system settings
+ * 
+ * @author SWIFT Development Team
+ * @version 2.1.0
+ * @since 2024-01-15
+ */
+
+// Prevent direct access
 if (!defined('SWIFT_SYSTEM')) {
     define('SWIFT_SYSTEM', true);
 }
 
-// Set timezone to match Arduino
-date_default_timezone_set('Asia/Manila');
-
+// Database Configuration
 return [
     'client' => [
-        'host' => 'localhost:3306',
+        'host' => 'localhost',
         'database' => 'swift_client',
-        'user' => 'root',
-        'password' => '',
+        'user' => 'swift',
+        'password' => 'swift@2025',
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -21,10 +31,10 @@ return [
         ]
     ],
     'admin' => [
-        'host' => 'localhost:3306',
+        'host' => 'localhost',
         'database' => 'swift_admin',
-        'user' => 'root',
-        'password' => '',
+        'user' => 'swift',
+        'password' => 'swift@2025',
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -40,25 +50,27 @@ return [
         'debug' => false,
         'maintenance_mode' => false,
         'cache_version' => '6',
-        'device_timeout' => 10, 
-        'http_timeout' => 1,    
-        'ping_timeout' => 1     
+        'device_timeout' => 10, // seconds
+        'http_timeout' => 1,    // seconds
+        'ping_timeout' => 1     // seconds
     ],
     'security' => [
-        'session_timeout' => 3600, 
+        'session_timeout' => 3600, // 1 hour
         'max_login_attempts' => 5,
         'password_min_length' => 8,
-        'csrf_token_lifetime' => 1800, 
-        'rate_limit_requests' => 100,  
+        'csrf_token_lifetime' => 1800, // 30 minutes
+        'rate_limit_requests' => 100,  // per minute
         'allowed_file_types' => ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'csv'],
-        'max_file_size' => 5242880 
+        'max_file_size' => 5242880 // 5MB
     ],
     'logging' => [
         'enabled' => true,
-        'level' => 'INFO', 
-        'max_file_size' => 10485760, 
+        'level' => 'INFO', // DEBUG, INFO, WARNING, ERROR, CRITICAL
+        'max_file_size' => 10485760, // 10MB
         'max_files' => 5,
         'log_directory' => __DIR__ . '/logs/'
     ]
 ];
 ?>
+
+
