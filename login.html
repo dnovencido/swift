@@ -1,60 +1,439 @@
 <!DOCTYPE html>
+<!--
+    SWIFT IoT System - Login Page Template
+    
+    This HTML template provides the authentication interface for the SWIFT IoT
+    Smart Swine Farming System. It handles user login, role-based redirection,
+    and session management.
+    
+    Features:
+    - Secure user authentication
+    - Role-based access control (Super User vs Regular User)
+    - Session persistence with localStorage
+    - Responsive design with gradient background
+    - Form validation and error handling
+    - Automatic redirection based on user role
+    
+    @version 2.0
+    @author SWIFT Development Team
+    @since 2024
+-->
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SWIFT 2.0 Login</title>
-    <link rel="icon" type="image/png" href="img/SWIFT-LOGO-MONOGRAM.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-    <link rel="stylesheet" href="css/style.css?v=1759866206" />
+    <!-- Basic HTML Meta Tags -->
+    <meta charset="UTF-8">                                    <!-- Character encoding -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- Responsive viewport -->
+    
+    <!-- Page Title and Favicon -->
+    <title>SWIFT 2.0 Login</title>                            <!-- Browser tab title -->
+    <link rel="icon" type="image/png" href="img/SWIFT-LOGO-MONOGRAM.png">  <!-- Favicon -->
+    
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />  <!-- Font Awesome icons -->
+    <link rel="stylesheet" href="css/style.css?v=1759866206" />  <!-- Main stylesheet with cache busting -->
+    
+    <!-- Login Page Specific Styles -->
     <style>
-        body { display:block; min-height:100vh; }
-        .login-container { display:flex; justify-content:center; align-items:center; min-height:100vh; background: linear-gradient(135deg, var(--primary-light) 0%, var(--gray-100) 100%); }
-        .login-card { background: var(--white); border-radius: var(--border-radius); padding: 40px; box-shadow: var(--card-shadow); width: 100%; max-width: 420px; text-align:center; }
-        .login-form .form-group { margin-bottom: 16px; text-align:left; }
-        .login-form label { display:block; margin-bottom: 8px; font-weight: 600; }
-        .login-form input { width:100%; padding:14px; border:2px solid var(--gray-medium); border-radius: 10px; font-size: 16px; }
-        .login-btn { width:100%; background: var(--primary-color); color:#fff; border:none; border-radius: 10px; padding: 14px; font-weight: 600; cursor:pointer; }
+        /* Full height body styling */
+        body { 
+            display: block; 
+            min-height: 100vh; 
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Login container with background image and right-side layout */
+        .login-container { 
+            display: flex; 
+            justify-content: flex-end; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-image: url('img/pig 38.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            padding: 20px;
+        }
+        
+        /* Background overlay for better readability */
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+        
+        /* Login card with glassmorphism styling */
+        .login-card { 
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px; 
+            padding: 40px; 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 100%; 
+            max-width: 420px; 
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            margin-right: 50px;
+        }
+        
+        /* Logo styling for glassmorphism */
+        .login-card .logo {
+            margin-bottom: 30px;
+        }
+        
+        .login-card .logo img {
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+        }
+        
+        /* Form group spacing */
+        .login-form .form-group { 
+            margin-bottom: 20px; 
+            text-align: left; 
+        }
+        
+        /* Form label styling with glassmorphism */
+        .login-form label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Form input styling with glassmorphism */
+        .login-form input { 
+            width: 100%; 
+            padding: 16px 20px; 
+            background: rgba(28, 27, 27, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px; 
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .login-form input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .login-form input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Login button styling with glassmorphism */
+        .login-btn { 
+            width: 100%; 
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.9); 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px; 
+            padding: 16px; 
+            font-weight: 600; 
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .login-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Page title styling */
+        .login-card h1 {
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .login-card p {
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .login-container {
+                justify-content: center;
+                padding: 20px;
+            }
+            
+            .login-card {
+                margin-right: 0;
+                max-width: 100%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 30px 20px;
+                margin: 0 10px;
+            }
+        }
     </style>
+    
+    <!-- Login Page JavaScript -->
     <script>
+        /**
+         * Login Page Initialization
+         * 
+         * Handles page load, authentication check, and form submission.
+         * Manages user sessions and role-based redirection.
+         */
         document.addEventListener('DOMContentLoaded', function() {
+            // Check for existing user session
             try {
-                const u = JSON.parse(localStorage.getItem('swift_user')||'null');
-                if (u && (u.role||'').toLowerCase() === 'super_user') { window.location.href='admin/dashboard.html'; return; }
-                if (u) { window.location.href='user/index.html'; return; }
-            } catch(e) {}
+                const u = JSON.parse(localStorage.getItem('swift_user') || 'null');
+                
+                // Redirect based on user role
+                if (u && (u.role || '').toLowerCase() === 'super_user') { 
+                    window.location.href = 'admin/dashboard.html'; 
+                    return; 
+                }
+                if (u) { 
+                    window.location.href = 'user/index.html'; 
+                    return; 
+                }
+            } catch(e) {
+                // Invalid session data, continue to login form
+            }
+            
+            // Set up login form submission handler
             const form = document.getElementById('loginForm');
             form.addEventListener('submit', function(e){
-                e.preventDefault();
+                e.preventDefault();  // Prevent default form submission
+                
+                // Get form data
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value;
-                fetch('php/api/v1/auth.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'login', username, password }) })
-                .then(r=>r.json()).then(result=>{
+                
+                // Submit login request to API
+                fetch('php/api/v1/auth.php', { 
+                    method: 'POST', 
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }, 
+                    body: JSON.stringify({ 
+                        action: 'login', 
+                        username, 
+                        password 
+                    }) 
+                })
+                .then(r => r.json())
+                .then(result => {
                     if (result.success){
-                        try{ localStorage.setItem('swift_user', JSON.stringify({ username: result.username||username, role: result.role||'user' })); }catch(e){}
-                        if ((result.role||'').toLowerCase() === 'super_user') {
-                            window.location.href='admin/dashboard.html';
+                        // Store user session data
+                        try{ 
+                            localStorage.setItem('swift_user', JSON.stringify({ 
+                                username: result.username || username, 
+                                role: result.role || 'user' 
+                            })); 
+                        } catch(e){}
+                        
+                        // Redirect based on user role
+                        if ((result.role || '').toLowerCase() === 'super_user') {
+                            window.location.href = 'admin/dashboard.html';
                         } else {
-                            window.location.href='user/index.html';
+                            window.location.href = 'user/index.html';
                         }
-                    } else { alert(result.message || 'Login failed'); }
-                }).catch(()=> alert('Network error'));
+                    } else { 
+                        showModal('Error', result.message || 'Login failed', 'error'); 
+                    }
+                })
+                .catch(() => showModal('Error', 'Network error', 'error'));
             });
         });
+        
+        // Modal System Functions
+        function showModal(title, message, type = 'info', showCancel = false) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modalOverlay');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalMessage = document.getElementById('modalMessage');
+                const modalIcon = document.getElementById('modalIcon');
+                const modalConfirm = document.getElementById('modalConfirm');
+                const modalCancel = document.getElementById('modalCancel');
+                const modalClose = document.getElementById('modalClose');
+
+                // Set content
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+
+                // Set icon based on type
+                const iconMap = {
+                    'info': 'fas fa-info-circle',
+                    'success': 'fas fa-check-circle',
+                    'error': 'fas fa-exclamation-triangle',
+                    'warning': 'fas fa-exclamation-circle',
+                    'confirm': 'fas fa-question-circle',
+                    'delete': 'fas fa-trash-alt'
+                };
+                modalIcon.className = iconMap[type] || iconMap['info'];
+
+                // Set icon color based on type
+                const colorMap = {
+                    'info': '#1877f2',
+                    'success': '#42b883',
+                    'error': '#f02849',
+                    'warning': '#f7b928',
+                    'confirm': '#17a2b8',
+                    'delete': '#f02849'
+                };
+                modalIcon.style.color = colorMap[type] || colorMap['info'];
+
+                // Show/hide cancel button
+                modalCancel.style.display = showCancel ? 'inline-block' : 'none';
+
+                // Set button text based on type
+                if (type === 'success') {
+                    modalConfirm.textContent = 'OK';
+                    modalConfirm.className = 'modal-btn modal-btn-primary';
+                } else if (type === 'error') {
+                    modalConfirm.textContent = 'OK';
+                    modalConfirm.className = 'modal-btn modal-btn-primary';
+                } else if (type === 'confirm') {
+                    modalConfirm.textContent = 'Confirm';
+                    modalConfirm.className = 'modal-btn modal-btn-primary';
+                    modalCancel.textContent = 'Cancel';
+                } else if (type === 'delete') {
+                    modalConfirm.textContent = 'Delete';
+                    modalConfirm.className = 'modal-btn modal-btn-danger';
+                    modalCancel.textContent = 'Cancel';
+                } else {
+                    modalConfirm.textContent = 'OK';
+                    modalConfirm.className = 'modal-btn modal-btn-primary';
+                }
+
+                // Show modal
+                modal.style.display = 'flex';
+
+                // Event handlers
+                const handleConfirm = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const handleClose = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const cleanup = () => {
+                    modal.style.display = 'none';
+                    modalConfirm.removeEventListener('click', handleConfirm);
+                    modalCancel.removeEventListener('click', handleCancel);
+                    modalClose.removeEventListener('click', handleClose);
+                    modal.removeEventListener('click', handleOverlayClick);
+                };
+
+                const handleOverlayClick = (e) => {
+                    if (e.target === modal) {
+                        handleClose();
+                    }
+                };
+
+                // Add event listeners
+                modalConfirm.addEventListener('click', handleConfirm);
+                modalCancel.addEventListener('click', handleCancel);
+                modalClose.addEventListener('click', handleClose);
+                modal.addEventListener('click', handleOverlayClick);
+
+                // Focus on confirm button
+                setTimeout(() => modalConfirm.focus(), 100);
+            });
+        }
+
+        // Replace alert function
+        window.alert = (message) => showModal('Alert', message, 'info');
+
+        // Replace confirm function
+        window.confirm = (message) => showModal('Confirm', message, 'confirm', true);
     </script>
-    </head>
+</head>
 <body>
+    <!-- Login Container -->
     <div class="login-container">
+        <!-- Login Card -->
         <div class="login-card">
+            <!-- Logo Section -->
             <div class="login-logo">
-                <img src="img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 140px; width: auto;">
+                <img src="img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 140px; width: auto;">  <!-- Main logo -->
             </div>
+            
+            <!-- Login Title -->
             <h1 class="login-title">Login</h1>
+            
+            <!-- Login Form -->
             <form id="loginForm" class="login-form">
-                <div class="form-group"><label for="username">Username</label><input id="username" type="text" required></div>
-                <div class="form-group"><label for="password">Password</label><input id="password" type="password" required></div>
+                <!-- Username Input Group -->
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input id="username" type="text" required>
+                </div>
+                
+                <!-- Password Input Group -->
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" required>
+                </div>
+                
+                <!-- Login Button -->
                 <button type="submit" class="login-btn">Sign In</button>
             </form>
+        </div>
+    </div>
+    
+    <!-- Modal System -->
+    <div id="modalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title-section">
+                    <i id="modalIcon" class="fas fa-info-circle"></i>
+                    <h3 id="modalTitle">Alert</h3>
+                </div>
+                <button id="modalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Message</p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalConfirm" class="modal-btn modal-btn-primary">OK</button>
+                <button id="modalCancel" class="modal-btn modal-btn-secondary" style="display: none;">Cancel</button>
+            </div>
         </div>
     </div>
 </body>

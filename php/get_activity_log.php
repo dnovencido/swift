@@ -24,8 +24,8 @@ class ActivityLogManager {
                 LEFT JOIN users u ON al.user_id = u.id
                 WHERE 1=1
                 AND (
-                    -- Only admin actions
-                    al.action IN ('login', 'logout', 'admin_action', 'system')
+                    -- Only specific admin actions
+                    al.action IN ('login', 'logout', 'admin_action', 'device_manual_check', 'device_all_check')
                     -- Only admin users (super_user or admin username)
                     AND (u.role = 'super_user' OR u.username = 'admin' OR u.username IS NULL)
                 )

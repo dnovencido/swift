@@ -7,11 +7,25 @@ class ActivityLogger {
     }
     public function logActivity($action, $description = null, $userId = null, $deviceId = null, $ipAddress = null, $userAgent = null) {
         try {
-            $allowedActions = ['login', 'logout', 'admin_action', 'system'];
+            // Only allow specific admin actions
+            $allowedActions = [
+                'login', 
+                'logout', 
+                'admin_action',
+                'device_manual_check',
+                'device_all_check'
+            ];
+            
             if (!in_array($action, $allowedActions)) {
                 error_log("ActivityLogger: Attempted to log non-admin action '$action' - rejected");
                 return false;
             }
+            
+            // Skip automatic system events (like device data transmission)
+            if ($action === 'system') {
+                return false; // Don't log automatic system events
+            }
+            
             if (!$ipAddress) {
                 $ipAddress = $this->getClientIP();
             }
@@ -137,10 +151,70 @@ class ActivityLogger {
         );
     }
     public function logSystemEvent($action, $description) {
+        // System events are no longer logged to reduce activity log clutter
+        // Only log critical system events like unauthorized access attempts
+        if (strpos($description, 'Unauthorized') !== false || strpos($description, 'denied') !== false) {
+            return $this->logActivity('admin_action', $description, null);
+        }
+        return false; // Don't log routine system events
+    }
+    
+    // Device management logging methods
+    public function logDeviceAssign($adminUserId, $deviceId, $deviceName, $username, $ipAddress) {
         return $this->logActivity(
-            'system',
-            $description,
+            'admin_action',
+            "Assigned device '{$deviceName}' (IP: {$ipAddress}) to user '{$username}' (Device ID: {$deviceId})",
+            $adminUserId,
             null,
+            $this->getClientIP(),
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        );
+    }
+    
+    public function logDeviceUpdate($adminUserId, $deviceId, $deviceName, $username, $ipAddress) {
+        return $this->logActivity(
+            'admin_action',
+            "Updated device '{$deviceName}' (IP: {$ipAddress}) assignment for user '{$username}' (Device ID: {$deviceId})",
+            $adminUserId,
+            null,
+            $this->getClientIP(),
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        );
+    }
+    
+    public function logDeviceDelete($adminUserId, $deviceId, $deviceName) {
+        return $this->logActivity(
+            'admin_action',
+            "Deleted device '{$deviceName}' (Device ID: {$deviceId})",
+            $adminUserId,
+            null,
+            $this->getClientIP(),
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        );
+    }
+
+    /**
+     * Log manual individual device check
+     */
+    public function logDeviceManualCheck($adminUserId, $deviceId, $deviceName, $ipAddress) {
+        return $this->logActivity(
+            'device_manual_check',
+            "Manually checked device '{$deviceName}' (IP: {$ipAddress})",
+            $adminUserId,
+            $deviceId,
+            $this->getClientIP(),
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        );
+    }
+
+    /**
+     * Log manual all devices check
+     */
+    public function logDeviceAllCheck($adminUserId, $deviceCount) {
+        return $this->logActivity(
+            'device_all_check',
+            "Manually checked all devices ({$deviceCount} devices)",
+            $adminUserId,
             null,
             $this->getClientIP(),
             $_SERVER['HTTP_USER_AGENT'] ?? null

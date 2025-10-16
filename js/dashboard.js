@@ -2,7 +2,7 @@ class Dashboard {
     constructor() {
         this.sensorData = null;
         this.controlStates = { waterSprinkler: null, heat: null, mode: 'AUTO' };
-        this.arduinoIP = (window.SWIFT_CONFIG && window.SWIFT_CONFIG.arduinoIP) ? window.SWIFT_CONFIG.arduinoIP : null;
+        this.arduinoIP = null; // Will be set from assigned devices
         this.updateInterval = null;
         this.liveChartsManager = null;
         this.isInitialized = false;
@@ -23,7 +23,6 @@ class Dashboard {
         this.loadControlStates();
         this.loadDeviceStatus();
         this.setupHeatmap();
-        this.startSensorUpdates();
         this.initializeCharts();
         // this.forceArduinoToAutoMode(); // Disabled due to CORS issues
         this.isInitialized = true;
@@ -56,12 +55,49 @@ class Dashboard {
     
     async loadDeviceStatus() {
         try {
-            const deviceRes = await fetch('../php/admin_lists.php?type=devices');
-            const deviceData = await deviceRes.json();
-            this.deviceStatus = deviceData.success ? deviceData.data : [];
+            console.log('Loading device status...');
+            // Load user's assigned devices
+            const response = await fetch('../php/api/v1/user_devices.php');
+            console.log('Device API response status:', response.status);
+            
+            const data = await response.json();
+            console.log('Device API response data:', data);
+            
+            if (data.success && data.data.length > 0) {
+                this.deviceStatus = data.data;
+                console.log('Loaded assigned devices:', this.deviceStatus);
+                
+                // Use the first assigned device as the primary device
+                const primaryDevice = this.deviceStatus[0];
+                console.log('Primary device:', primaryDevice);
+                
+                // Update the Arduino IP
+                const newIP = primaryDevice.ip_address;
+                console.log('Setting Arduino IP to:', newIP);
+                this.arduinoIP = newIP;
+                
+                // Update Arduino IP in config if available
+                if (window.SWIFT_CONFIG) {
+                    try {
+                        window.SWIFT_CONFIG.arduinoIP = this.arduinoIP;
+                    } catch (e) {
+                        console.log('Could not update SWIFT_CONFIG.arduinoIP (read-only):', e.message);
+                    }
+                }
+                
+                console.log('Primary device IP set to:', this.arduinoIP);
+                
+                // Start sensor updates now that we have a device IP
+                this.startSensorUpdates();
+            } else {
+                console.log('No devices assigned to user');
+                this.deviceStatus = [];
+                this.arduinoIP = null;
+            }
+            
             this.displayDeviceStatus();
-        } catch (e) {
-            console.warn('Failed to load device status:', e);
+        } catch (error) {
+            console.error('Error loading device status:', error);
             this.deviceStatus = [];
             this.displayDeviceStatus();
         }
@@ -75,7 +111,8 @@ class Dashboard {
             container.innerHTML = `
                 <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
                     <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 8px; color: var(--warning);"></i>
-                    <p>No devices found</p>
+                    <p>No devices assigned to your account</p>
+                    <p style="font-size: 0.9em; margin-top: 10px;">Contact your administrator to assign devices to your account.</p>
                 </div>
             `;
             return;
@@ -137,6 +174,12 @@ class Dashboard {
         }).join('');
     }
     startSensorUpdates() {
+        // Only start sensor updates if user has assigned devices
+        if (!this.arduinoIP) {
+            console.log('No device assigned - skipping sensor updates');
+            return;
+        }
+        
         this.updateSensorData();
         
         this.updateInterval = setInterval(() => {
@@ -420,10 +463,11 @@ class Dashboard {
     }
     
     async getDataFromArduino() {
-        const arduinoIP = (window.SWIFT_CONFIG && window.SWIFT_CONFIG.arduinoIP) ? window.SWIFT_CONFIG.arduinoIP : null;
+        // Use the user's assigned device IP instead of config IP
+        const arduinoIP = this.arduinoIP;
         
         if (!arduinoIP) {
-            console.log('Arduino IP not configured');
+            console.log('No device assigned to user - skipping Arduino connection');
             return null;
         }
         
@@ -432,7 +476,7 @@ class Dashboard {
             const timeoutId = setTimeout(() => controller.abort(), 1000); // Reduced timeout
             
             const timestamp = Date.now();
-            const response = await fetch(`${arduinoIP}/data?t=${timestamp}`, {
+            const response = await fetch(`http://${arduinoIP}/data?t=${timestamp}`, {
                 signal: controller.signal,
                 method: 'GET',
                 cache: 'no-cache',
@@ -795,7 +839,10 @@ class Dashboard {
         console.log('Dashboard destroyed');
     }
     
-    logout(){ if (!confirm('Are you sure you want to logout?')) return; fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href = '../login.html'; }); }
+    async logout(){ 
+        if (!(await showModal('Confirm Logout', 'Are you sure you want to logout?', 'confirm', true))) return; 
+        fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href = '../login.html'; }); 
+    }
 }
 let dashboardInstance = null;
 

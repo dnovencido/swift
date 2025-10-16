@@ -35,6 +35,12 @@ const unsigned long MAX_TIME_SYNC_RETRIES = 10;
 const char* ssid = "PLDTHOMEFIBRa7b48";
 const char* password = "PLDTWIFIrpmj3";
 
+// Static IP Configuration
+IPAddress staticIP(192, 168, 1, 11);    // Device IP address
+IPAddress gateway(192, 168, 1, 1);      // Router/Gateway IP
+IPAddress subnet(255, 255, 255, 0);     // Subnet mask
+IPAddress dns(8, 8, 8, 8);              // DNS server (Google DNS)
+
 const char* serverHost = "192.168.1.10";
 const int serverPort = 80;
 const char* serverPath = "/SWIFT/NEW_SWIFT/php/save_realtime_data.php";
@@ -331,6 +337,22 @@ void connectToWiFi() {
   Serial.println("==================================================");
   Serial.println();
   
+  Serial.println("CONFIGURING STATIC IP ADDRESS...");
+  Serial.print("Static IP: ");
+  Serial.println(staticIP);
+  Serial.print("Gateway: ");
+  Serial.println(gateway);
+  Serial.print("Subnet: ");
+  Serial.println(subnet);
+  Serial.print("DNS: ");
+  Serial.println(dns);
+  Serial.println();
+  
+  // Configure static IP (Arduino UNO R4 WiFi returns void, not bool)
+  WiFi.config(staticIP, gateway, subnet, dns);
+  Serial.println("✓ Static IP configuration sent");
+  Serial.println();
+  
   Serial.println("ATTEMPTING TO CONNECT TO THE WIFI...");
   WiFi.begin(ssid, password);
   
@@ -367,6 +389,17 @@ void connectToWiFi() {
     Serial.print("Signal Strength (RSSI): ");
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
+    
+    // Verify static IP assignment
+    if (WiFi.localIP() == staticIP) {
+      Serial.println("✓ Static IP assignment confirmed!");
+    } else {
+      Serial.println("⚠️ Warning: IP address differs from configured static IP");
+      Serial.print("Expected: ");
+      Serial.println(staticIP);
+      Serial.print("Actual: ");
+      Serial.println(WiFi.localIP());
+    }
   } else {
     Serial.println("✗ WiFi Connection Failed!");
     printWiFiStatus();
@@ -374,7 +407,8 @@ void connectToWiFi() {
     Serial.println("1. Check if WiFi credentials are correct");
     Serial.println("2. Ensure WiFi network is 2.4GHz (not 5GHz)");
     Serial.println("3. Check if network allows new devices");
-    Serial.println("4. Try restarting your router");
+    Serial.println("4. Verify static IP is not already in use");
+    Serial.println("5. Try restarting your router");
   }
 }
 
@@ -918,6 +952,7 @@ void sendDataToWebApp() {
   }
   
   String jsonData = "{";
+  jsonData += "\"device_id\":\"D001\",";  // Device code from database
   jsonData += "\"timestamp\":\"" + sensorData.timestamp + "\",";
   jsonData += "\"temp\":" + String(sensorData.temperature, 1) + ",";
   jsonData += "\"hum\":" + String(sensorData.humidity, 1) + ",";

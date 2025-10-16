@@ -13,7 +13,8 @@ try {
     if ($type === 'users' && tableExists($db, 'users')) {
         $stmt = $db->query('
             SELECT u.id, u.username, u.role, u.is_active, u.created_at,
-                   p.first_name, p.last_name, p.mobile, p.email
+                   p.first_name, p.last_name, p.middle_name, p.mobile, p.email,
+                   p.addr_street, p.addr_barangay, p.addr_city, p.addr_province, p.addr_postal
             FROM users u 
             LEFT JOIN user_profiles p ON p.user_id = u.id
             WHERE u.role <> "super_user" AND u.username <> "admin" 
@@ -22,9 +23,16 @@ try {
         $users = $stmt->fetchAll();
         $data = [];
         foreach ($users as $user) {
+            // Get farms for this user
             $farmStmt = $db->prepare('SELECT id, farm_name, street, barangay, city, province, postal FROM farms WHERE user_id = ?');
             $farmStmt->execute([$user['id']]);
             $user['farms'] = $farmStmt->fetchAll();
+            
+            // Get devices for this user
+            $deviceStmt = $db->prepare('SELECT id, device_name, device_code, device_type, ip_address, status, last_seen FROM devices WHERE user_id = ?');
+            $deviceStmt->execute([$user['id']]);
+            $user['devices'] = $deviceStmt->fetchAll();
+            
             $data[] = $user;
         }
     } elseif ($type === 'farms' && tableExists($db, 'farms')) {
@@ -38,7 +46,16 @@ try {
             LEFT JOIN user_profiles p ON p.user_id = u.id
             ORDER BY f.id DESC
         ');
-        $data = $stmt->fetchAll();
+        $farms = $stmt->fetchAll();
+        $data = [];
+        foreach ($farms as $farm) {
+            // Get devices for this farm
+            $deviceStmt = $db->prepare('SELECT id, device_name, device_code, device_type, ip_address, status, last_seen FROM devices WHERE farm_id = ?');
+            $deviceStmt->execute([$farm['id']]);
+            $farm['devices'] = $deviceStmt->fetchAll();
+            
+            $data[] = $farm;
+        }
     } elseif ($type === 'devices' && tableExists($db, 'devices')) {
         if ($status === 'up' || $status === 'down') {
             $stmt = $db->prepare("

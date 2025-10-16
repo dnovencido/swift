@@ -78,8 +78,8 @@ class DataBuffer {
                     $stmt = $clientDb->prepare("
                         INSERT INTO raw_sensor_data (
                             temperature, humidity, ammonia, timestamp, 
-                            pump_temp, pump_trigger, heat, mode, source, data_quality
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'buffer', 'good')
+                            pump_temp, pump_trigger, heat, mode, device_ip, source, data_quality
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'buffer', 'good')
                     ");
                     $arduinoTimestamp = $sensorData['timestamp'] ?? null;
                     $mysqlTimestamp = $this->parseArduinoTimestamp($arduinoTimestamp);
@@ -91,7 +91,8 @@ class DataBuffer {
                         $sensorData['pump_temp'] ?? null,
                         $sensorData['pump_trigger'] ?? null,
                         $sensorData['heat'] ?? null,
-                        $sensorData['mode'] ?? null
+                        $sensorData['mode'] ?? null,
+                        $sensorData['device_ip'] ?? null
                     ]);
                     if ($result) {
                         $transferredCount++;

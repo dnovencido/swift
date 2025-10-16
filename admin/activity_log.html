@@ -128,7 +128,7 @@
 </head>
 <body>
     <div class="sidebar">
-        <div>
+        <div class="sidebar-top">
             <div class="logo">
                 <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
             </div>
@@ -138,7 +138,11 @@
                 <a href="activity_log.html" class="nav-item active"><i class="fas fa-history"></i><span>Activity Log</span></a>
             </div>
         </div>
-        <div class="nav-menu"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+        <div class="sidebar-bottom">
+            <div class="nav-menu">
+                <a href="../login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+            </div>
+        </div>
     </div>
     <div class="main-content">
         <div class="header">
@@ -206,8 +210,143 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal System -->
+    <div id="modalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title-section">
+                    <i id="modalIcon" class="fas fa-info-circle"></i>
+                    <h3 id="modalTitle">Alert</h3>
+                </div>
+                <button id="modalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Message</p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalConfirm" class="modal-btn modal-btn-primary">OK</button>
+                <button id="modalCancel" class="modal-btn modal-btn-secondary" style="display: none;">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Modal System Functions
+            function showModal(title, message, type = 'info', showCancel = false) {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('modalOverlay');
+                    const modalTitle = document.getElementById('modalTitle');
+                    const modalMessage = document.getElementById('modalMessage');
+                    const modalIcon = document.getElementById('modalIcon');
+                    const modalConfirm = document.getElementById('modalConfirm');
+                    const modalCancel = document.getElementById('modalCancel');
+                    const modalClose = document.getElementById('modalClose');
+                    
+                    // Set content
+                    modalTitle.textContent = title;
+                    modalMessage.textContent = message;
+                    
+                    // Set icon based on type
+                    const iconMap = {
+                        'info': 'fas fa-info-circle',
+                        'success': 'fas fa-check-circle',
+                        'error': 'fas fa-exclamation-triangle',
+                        'warning': 'fas fa-exclamation-circle',
+                        'confirm': 'fas fa-question-circle',
+                        'delete': 'fas fa-trash-alt'
+                    };
+                    
+                    modalIcon.className = iconMap[type] || iconMap['info'];
+                    
+                    // Set icon color based on type
+                    const colorMap = {
+                        'info': '#1877f2',
+                        'success': '#42b883',
+                        'error': '#f02849',
+                        'warning': '#f7b928',
+                        'confirm': '#17a2b8',
+                        'delete': '#f02849'
+                    };
+                    
+                    modalIcon.style.color = colorMap[type] || colorMap['info'];
+                    
+                    // Show/hide cancel button
+                    modalCancel.style.display = showCancel ? 'inline-block' : 'none';
+                    
+                    // Set button text based on type
+                    if (type === 'success') {
+                        modalConfirm.textContent = 'OK';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                    } else if (type === 'error') {
+                        modalConfirm.textContent = 'OK';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                    } else if (type === 'confirm') {
+                        modalConfirm.textContent = 'Confirm';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                        modalCancel.textContent = 'Cancel';
+                    } else if (type === 'delete') {
+                        modalConfirm.textContent = 'Delete';
+                        modalConfirm.className = 'modal-btn modal-btn-danger';
+                        modalCancel.textContent = 'Cancel';
+                    } else {
+                        modalConfirm.textContent = 'OK';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                    }
+                    
+                    // Show modal
+                    modal.style.display = 'flex';
+                    
+                    // Event handlers
+                    const handleConfirm = () => {
+                        modal.style.display = 'none';
+                        resolve(true);
+                        cleanup();
+                    };
+                    
+                    const handleCancel = () => {
+                        modal.style.display = 'none';
+                        resolve(false);
+                        cleanup();
+                    };
+                    
+                    const handleClose = () => {
+                        modal.style.display = 'none';
+                        resolve(false);
+                        cleanup();
+                    };
+                    
+                    const cleanup = () => {
+                        modalConfirm.removeEventListener('click', handleConfirm);
+                        modalCancel.removeEventListener('click', handleCancel);
+                        modalClose.removeEventListener('click', handleClose);
+                        modal.removeEventListener('click', handleOverlayClick);
+                    };
+                    
+                    const handleOverlayClick = (e) => {
+                        if (e.target === modal) {
+                            handleClose();
+                        }
+                    };
+                    
+                    // Add event listeners
+                    modalConfirm.addEventListener('click', handleConfirm);
+                    modalCancel.addEventListener('click', handleCancel);
+                    modalClose.addEventListener('click', handleClose);
+                    modal.addEventListener('click', handleOverlayClick);
+                    
+                    // Focus on confirm button
+                    setTimeout(() => modalConfirm.focus(), 100);
+                });
+            }
+            
+            // Replace alert function
+            window.alert = (message) => showModal('Alert', message, 'info');
+            
+            // Replace confirm function
+            window.confirm = (message) => showModal('Confirm', message, 'confirm', true);
+            
             let currentPage = 1;
             let totalPages = 1;
             let currentFilters = {};
@@ -316,9 +455,9 @@
                     document.getElementById('pagination').style.display = 'none';
                 }
             }
-            document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            document.getElementById('logoutBtn').addEventListener('click', async function(e) {
                 e.preventDefault();
-                if (confirm('Are you sure you want to logout?')) {
+                if (await showModal('Confirm Logout', 'Are you sure you want to logout?', 'confirm', true)) {
                     try { 
                         localStorage.clear(); 
                         sessionStorage.clear();

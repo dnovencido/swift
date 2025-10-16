@@ -1,59 +1,283 @@
 <!DOCTYPE html>
+<!--
+    SWIFT IoT System - Admin Dashboard Template
+    
+    This HTML template provides the main administrative dashboard interface for the SWIFT IoT
+    Smart Swine Farming System. It displays system statistics, device status, and provides
+    navigation to various administrative functions.
+    
+    Features:
+    - Real-time system statistics display
+    - Device status monitoring
+    - User and farm management access
+    - Activity logging interface
+    - Responsive design with sidebar navigation
+    - Authentication and role-based access control
+    
+    @version 2.0
+    @author SWIFT Development Team
+    @since 2024
+-->
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>SWIFT 2.0 - Dashboard</title>
-    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-    <link rel="stylesheet" href="../css/style.css?v=1759866206" />
+    <!-- Basic HTML Meta Tags -->
+    <meta charset="UTF-8">                                    <!-- Character encoding -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- Responsive viewport -->
+    
+    <!-- Cache Control Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">  <!-- Prevent caching -->
+    <meta http-equiv="Pragma" content="no-cache">             <!-- HTTP/1.0 cache control -->
+    <meta http-equiv="Expires" content="0">                   <!-- Expire immediately -->
+    
+    <!-- Page Title and Favicon -->
+    <title>SWIFT 2.0 - Dashboard</title>                      <!-- Browser tab title -->
+    <link rel="icon" type="image/png" href="../img/SWIFT-LOGO-MONOGRAM.png">  <!-- Favicon -->
+    
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />  <!-- Font Awesome icons -->
+    <link rel="stylesheet" href="../css/style.css?v=1759866206" />  <!-- Main stylesheet with cache busting -->
+    
+    <!-- Reserved for additional scripts -->
     <script></script>
     <script></script>
 </head>
 <body>
+    <!-- Sidebar Navigation -->
     <div class="sidebar">
-        <div>
+        <div class="sidebar-top">
+            <!-- Logo Section -->
             <div class="logo">
-                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">
+                <img src="../img/SWIFT-LOGO-TITLE.png" alt="SWIFT" style="height: 120px; width: auto;">  <!-- Main logo -->
             </div>
+            
+            <!-- Main Navigation Menu -->
             <div class="nav-menu">
-                <a href="dashboard.html" class="nav-item active"><i class="fas fa-home"></i><span>Dashboard</span></a>
-                <a href="index.html" class="nav-item"><i class="fas fa-users-cog"></i><span>User & Farm Management</span></a>
-                <a href="activity_log.html" class="nav-item"><i class="fas fa-history"></i><span>Activity Log</span></a>
+                <!-- Dashboard Link (Active) -->
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <!-- User & Farm Management Link -->
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-users-cog"></i>
+                    <span>User & Farm Management</span>
+                </a>
+                
+                <!-- Activity Log Link -->
+                <a href="activity_log.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Activity Log</span>
+                </a>
             </div>
         </div>
-        <div class="nav-menu"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a></div>
+        
+        <!-- Bottom Navigation (Logout) -->
+        <div class="sidebar-bottom">
+            <div class="nav-menu">
+                <a href="../login.html" class="nav-item" id="logoutBtn">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
     </div>
+    
+    <!-- Main Content Area -->
     <div class="main-content">
-        <div class="header"><div class="welcome-section"><p class="greeting" id="greeting">&nbsp;</p><h1 class="welcome-title">DASHBOARD</h1></div></div>
+        <!-- Header Section -->
+        <div class="header">
+            <div class="welcome-section">
+                <!-- Personalized Greeting -->
+                <p class="greeting" id="greeting">&nbsp;</p>
+                <!-- Page Title -->
+                <h1 class="welcome-title">DASHBOARD</h1>
+            </div>
+        </div>
+        
+        <!-- Statistics Cards Section -->
         <div class="control-card" style="margin-top:16px;">
             <div class="transfer-cards">
-                <div class="transfer-card clickable" data-type="users"><div class="card-icon"><i class="fas fa-user"></i></div><p class="card-title">Users</p><h2 class="card-amount" id="statUsers">-</h2></div>
-                <div class="transfer-card clickable" data-type="farms"><div class="card-icon"><i class="fas fa-warehouse"></i></div><p class="card-title">Farms</p><h2 class="card-amount" id="statFarms">-</h2></div>
-                <div class="transfer-card clickable" data-type="devices"><div class="card-icon"><i class="fas fa-microchip"></i></div><p class="card-title">Devices</p><h2 class="card-amount" id="statDevices">-</h2></div>
-                <div class="transfer-card clickable" data-type="devices" data-status="up"><div class="card-icon"><i class="fas fa-circle-check"></i></div><p class="card-title">Online</p><h2 class="card-amount" id="statOnline">-</h2></div>
-                <div class="transfer-card clickable" data-type="devices" data-status="down"><div class="card-icon"><i class="fas fa-circle-xmark"></i></div><p class="card-title">Offline</p><h2 class="card-amount" id="statOffline">-</h2></div>
+                <!-- Users Statistics Card -->
+                <div class="transfer-card clickable" data-type="users">
+                    <div class="card-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <p class="card-title">Users</p>
+                    <h2 class="card-amount" id="statUsers">-</h2>
+                </div>
+                
+                <!-- Farms Statistics Card -->
+                <div class="transfer-card clickable" data-type="farms">
+                    <div class="card-icon">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <p class="card-title">Farms</p>
+                    <h2 class="card-amount" id="statFarms">-</h2>
+                </div>
+                
+                <!-- Devices Statistics Card -->
+                <div class="transfer-card clickable" data-type="devices">
+                    <div class="card-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <p class="card-title">Devices</p>
+                    <h2 class="card-amount" id="statDevices">-</h2>
+                </div>
+                
+                <!-- Online Devices Statistics Card -->
+                <div class="transfer-card clickable" data-type="devices" data-status="up">
+                    <div class="card-icon">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+                    <p class="card-title">Online</p>
+                    <h2 class="card-amount" id="statOnline">-</h2>
+                </div>
+                
+                <!-- Offline Devices Statistics Card -->
+                <div class="transfer-card clickable" data-type="devices" data-status="down">
+                    <div class="card-icon">
+                        <i class="fas fa-circle-xmark"></i>
+                    </div>
+                    <p class="card-title">Offline</p>
+                    <h2 class="card-amount" id="statOffline">-</h2>
+                </div>
             </div>
         </div>
+        
+        <!-- Device Assignment Panel (Hidden by default) -->
+        <div id="deviceAssignmentPanel" class="control-card" style="margin-top:16px; display:none;">
+            <!-- Device Assignment Header -->
+            <div class="section-header" style="display:flex; align-items:center; justify-content:space-between;">
+                <h2 class="section-title" style="margin:0;">Device Assignment</h2>
+                <div style="display:flex; gap:8px;">
+                    <!-- Close Assignment Button -->
+                    <button id="closeAssignment" class="control-btn" style="background:#999">Close</button>
+                </div>
+            </div>
+            
+            <!-- Device Assignment Form -->
+            <div style="margin-top:20px;">
+                <form id="deviceAssignmentForm" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                    <!-- Left Column -->
+                    <div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Device IP Address *</label>
+                            <input type="text" id="assignDeviceIP" name="device_ip" required 
+                                   placeholder="e.g., 192.168.1.11" 
+                                   style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Device Name *</label>
+                            <input type="text" id="assignDeviceName" name="device_name" required 
+                                   placeholder="e.g., SWIFT Water Sprinkler Device" 
+                                   style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Device Type *</label>
+                            <select id="assignDeviceType" name="device_type" required 
+                                    style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                                <option value="">Select Type...</option>
+                                <option value="sensor">Sensor</option>
+                                <option value="controller">Controller</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Assign to User *</label>
+                            <select id="assignUserId" name="user_id" required 
+                                    style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                                <option value="">Select User...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Device Code *</label>
+                            <input type="text" id="assignDeviceCode" name="device_code" required 
+                                   placeholder="e.g., SWIFT_DEVICE_001" 
+                                   style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">MAC Address</label>
+                            <input type="text" id="assignMacAddress" name="mac_address" 
+                                   placeholder="e.g., AA:BB:CC:DD:EE:FF" 
+                                   style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Farm Location</label>
+                            <select id="assignFarmId" name="farm_id" 
+                                    style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                                <option value="">Select Farm...</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+                                <input type="checkbox" id="assignStaticIP" name="static_ip" checked> 
+                                Use Static IP Address
+                            </label>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Form Actions -->
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px; grid-column:1/-1;">
+                    <button type="button" id="cancelAssignment" class="control-btn" style="background:#999">Cancel</button>
+                    <button type="button" id="submitAssignment" class="control-btn" style="background:#0A4174;">Assign Device</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dynamic List Panel (Hidden by default) -->
         <div id="listPanel" class="control-card" style="margin-top:16px; display:none;">
+            <!-- List Panel Header -->
             <div class="section-header" style="display:flex; align-items:center; justify-content:space-between;">
                 <h2 id="listTitle" class="section-title" style="margin:0;">List</h2>
                 <div style="display:flex; gap:8px;">
+                    <!-- Check All Devices Button (Hidden by default) -->
                     <button id="checkAllDevices" class="control-btn" style="background:#0A4174; display:none;">Check All Devices</button>
+                    <!-- Close List Button -->
                     <button id="closeList" class="control-btn" style="background:#999">Close</button>
                 </div>
             </div>
+            
+            <!-- Data Table Container -->
             <div class="table-container" style="margin-top:10px;">
                 <table class="data-table" id="listTable">
-                    <thead><tr id="listHead"></tr></thead>
-                    <tbody id="listBody"><tr><td>Loading...</td></tr></tbody>
+                    <thead>
+                        <tr id="listHead"></tr>  <!-- Dynamic table headers -->
+                    </thead>
+                    <tbody id="listBody">
+                        <tr>
+                            <td>Loading...</td>  <!-- Default loading state -->
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
+    
+    <!-- Modal System -->
+    <div id="modalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title-section">
+                    <i id="modalIcon" class="fas fa-info-circle"></i>
+                    <h3 id="modalTitle">Alert</h3>
+                </div>
+                <button id="modalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Message</p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalConfirm" class="modal-btn modal-btn-primary">OK</button>
+                <button id="modalCancel" class="modal-btn modal-btn-secondary" style="display: none;">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             try {
@@ -63,6 +287,120 @@
             } catch(e){ window.location.href='../login.html'; return; }
             const hour=new Date().getHours(); const s=hour<12?'Good Morning':(hour<17?'Good Afternoon':'Good Evening'); let n='Admin'; try{const st=localStorage.getItem('swift_user'); if(st){const p=JSON.parse(st); n=p.username||n;}}catch(e){}; document.getElementById('greeting').textContent=`${s}, ${n}!`;
             document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='../login.html'; });});
+            
+            // Modal System Functions
+            function showModal(title, message, type = 'info', showCancel = false) {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('modalOverlay');
+                    const modalTitle = document.getElementById('modalTitle');
+                    const modalMessage = document.getElementById('modalMessage');
+                    const modalIcon = document.getElementById('modalIcon');
+                    const modalConfirm = document.getElementById('modalConfirm');
+                    const modalCancel = document.getElementById('modalCancel');
+                    const modalClose = document.getElementById('modalClose');
+                    
+                    // Set content
+                    modalTitle.textContent = title;
+                    modalMessage.textContent = message;
+                    
+                    // Set icon based on type
+                    const iconMap = {
+                        'info': 'fas fa-info-circle',
+                        'success': 'fas fa-check-circle',
+                        'error': 'fas fa-exclamation-triangle',
+                        'warning': 'fas fa-exclamation-circle',
+                        'confirm': 'fas fa-question-circle',
+                        'delete': 'fas fa-trash-alt'
+                    };
+                    
+                    modalIcon.className = iconMap[type] || iconMap['info'];
+                    
+                    // Set icon color based on type
+                    const colorMap = {
+                        'info': '#1877f2',
+                        'success': '#42b883',
+                        'error': '#f02849',
+                        'warning': '#f7b928',
+                        'confirm': '#17a2b8',
+                        'delete': '#f02849'
+                    };
+                    
+                    modalIcon.style.color = colorMap[type] || colorMap['info'];
+                    
+                    // Show/hide cancel button
+                    modalCancel.style.display = showCancel ? 'inline-block' : 'none';
+                    
+                    // Set button text based on type
+                    if (type === 'success') {
+                        modalConfirm.textContent = 'OK';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                    } else if (type === 'error') {
+                        modalConfirm.textContent = 'OK';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                    } else if (type === 'confirm') {
+                        modalConfirm.textContent = 'Confirm';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                        modalCancel.textContent = 'Cancel';
+                    } else if (type === 'delete') {
+                        modalConfirm.textContent = 'Delete';
+                        modalConfirm.className = 'modal-btn modal-btn-danger';
+                        modalCancel.textContent = 'Cancel';
+                    } else {
+                        modalConfirm.textContent = 'OK';
+                        modalConfirm.className = 'modal-btn modal-btn-primary';
+                    }
+                    
+                    // Show modal
+                    modal.style.display = 'flex';
+                    
+                    // Event handlers
+                    const handleConfirm = () => {
+                        modal.style.display = 'none';
+                        resolve(true);
+                        cleanup();
+                    };
+                    
+                    const handleCancel = () => {
+                        modal.style.display = 'none';
+                        resolve(false);
+                        cleanup();
+                    };
+                    
+                    const handleClose = () => {
+                        modal.style.display = 'none';
+                        resolve(false);
+                        cleanup();
+                    };
+                    
+                    const cleanup = () => {
+                        modalConfirm.removeEventListener('click', handleConfirm);
+                        modalCancel.removeEventListener('click', handleCancel);
+                        modalClose.removeEventListener('click', handleClose);
+                        modal.removeEventListener('click', handleOverlayClick);
+                    };
+                    
+                    const handleOverlayClick = (e) => {
+                        if (e.target === modal) {
+                            handleClose();
+                        }
+                    };
+                    
+                    // Add event listeners
+                    modalConfirm.addEventListener('click', handleConfirm);
+                    modalCancel.addEventListener('click', handleCancel);
+                    modalClose.addEventListener('click', handleClose);
+                    modal.addEventListener('click', handleOverlayClick);
+                    
+                    // Focus on confirm button
+                    setTimeout(() => modalConfirm.focus(), 100);
+                });
+            }
+            
+            // Replace alert function
+            window.alert = (message) => showModal('Alert', message, 'info');
+            
+            // Replace confirm function
+            window.confirm = (message) => showModal('Confirm', message, 'confirm', true);
             setTimeout(() => {
                 loadStats();
             }, 100);
@@ -108,6 +446,20 @@
             document.getElementById('checkAllDevices').addEventListener('click', ()=>{
                 checkAllDevices();
             });
+            
+            // Device Assignment Event Listeners
+            document.getElementById('closeAssignment').addEventListener('click', () => {
+                document.getElementById('deviceAssignmentPanel').style.display = 'none';
+            });
+            
+            document.getElementById('cancelAssignment').addEventListener('click', () => {
+                document.getElementById('deviceAssignmentPanel').style.display = 'none';
+                document.getElementById('deviceAssignmentForm').reset();
+            });
+            
+            document.getElementById('submitAssignment').addEventListener('click', () => {
+                submitDeviceAssignment();
+            });
             function loadList(type, status){
                 const titleMap = { users:'Users', farms:'Farms', devices:'Devices', up:'Online Devices', down:'Offline Devices' };
                 const listTitle = document.getElementById('listTitle');
@@ -127,15 +479,25 @@
                     if(!d||!d.success){ body.innerHTML='<tr><td>No data</td></tr>'; return; }
                     const rows = d.data||[];
                     if (type==='users') { 
-                        head.innerHTML='<th>ID</th><th>User Info</th><th>Contact</th><th>Address</th><th>Status</th><th>Farms</th>'; 
+                        head.innerHTML='<th>ID</th><th>User Info</th><th>Contact</th><th>Address</th><th>Status</th><th>Farms</th><th>Devices</th>'; 
                         body.innerHTML = rows.map(r=>{
                             const farms = r.farms || [];
+                            const devices = r.devices || [];
+                            
                             const farmDropdown = farms.length > 0 ? 
                                 `<select class="farm-select" data-user-id="${r.id}" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px;">
                                     <option value="">Select Farm</option>
                                     ${farms.map(f => `<option value="${f.id}">${f.farm_name}</option>`).join('')}
                                 </select>` : 
                                 '<span style="color:#999;">No Farms</span>';
+                            
+                            const deviceDropdown = devices.length > 0 ? 
+                                `<select class="device-select" data-user-id="${r.id}" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px;">
+                                    <option value="">Select Device</option>
+                                    ${devices.map(d => `<option value="${d.id}">${d.device_name || 'Unnamed Device'} (${d.ip_address}) - ${d.status === 'up' ? '🟢 Online' : '🔴 Offline'}</option>`).join('')}
+                                </select>` : 
+                                '<span style="color:#999; font-size:11px;">No Devices</span>';
+                            
                             return `<tr>
                                 <td>${r.id}</td>
                                 <td>
@@ -158,8 +520,9 @@
                                     <div style="font-size:11px; color:#666;">Created: ${r.created_at || 'Unknown'}</div>
                                 </td>
                                 <td>${farmDropdown}</td>
+                                <td style="max-width:200px;">${deviceDropdown}</td>
                             </tr>`;
-                        }).join('') || '<tr><td colspan="6">No users</td></tr>'; 
+                        }).join('') || '<tr><td colspan="7">No users</td></tr>'; 
                         document.querySelectorAll('.farm-select').forEach(select => {
                             select.addEventListener('change', (e) => {
                                 const userId = e.target.getAttribute('data-user-id');
@@ -167,10 +530,30 @@
                                 updateUserFarm(userId, farmId);
                             });
                         });
+                        
+                        // Add event listeners for device dropdowns
+                        document.querySelectorAll('.device-select').forEach(select => {
+                            select.addEventListener('change', (e) => {
+                                const userId = e.target.getAttribute('data-user-id');
+                                const deviceId = e.target.value;
+                                if (deviceId) {
+                                    console.log(`User ${userId} selected device ${deviceId}`);
+                                    // You can add device-specific actions here
+                                }
+                            });
+                        });
                     }
                     else if (type==='farms') { 
-                        head.innerHTML='<th>ID</th><th>Farm Info</th><th>Address</th><th>Status</th><th>Owner</th>'; 
+                        head.innerHTML='<th>ID</th><th>Farm Info</th><th>Address</th><th>Status</th><th>Owner</th><th>Devices</th>'; 
                         body.innerHTML = rows.map(r=>{
+                            const devices = r.devices || [];
+                            const deviceDropdown = devices.length > 0 ? 
+                                `<select class="device-select" data-farm-id="${r.id}" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px;">
+                                    <option value="">Select Device</option>
+                                    ${devices.map(d => `<option value="${d.id}">${d.device_name || 'Unnamed Device'} (${d.ip_address}) - ${d.status === 'up' ? '🟢 Online' : '🔴 Offline'}</option>`).join('')}
+                                </select>` : 
+                                '<span style="color:#999; font-size:11px;">No Devices</span>';
+                            
                             return `<tr>
                                 <td>${r.id}</td>
                                 <td>
@@ -191,8 +574,21 @@
                                     <div style="font-size:11px; color:#999;">📧 ${r.email || 'No email'}</div>
                                     <div style="font-size:11px; color:#999;">📱 ${r.mobile || 'No mobile'}</div>
                                 </td>
+                                <td style="max-width:200px;">${deviceDropdown}</td>
                             </tr>`;
-                        }).join('') || '<tr><td colspan="5">No farms</td></tr>'; 
+                        }).join('') || '<tr><td colspan="6">No farms</td></tr>'; 
+                        
+                        // Add event listeners for farm device dropdowns
+                        document.querySelectorAll('.device-select').forEach(select => {
+                            select.addEventListener('change', (e) => {
+                                const farmId = e.target.getAttribute('data-farm-id');
+                                const deviceId = e.target.value;
+                                if (deviceId) {
+                                    console.log(`Farm ${farmId} selected device ${deviceId}`);
+                                    // You can add device-specific actions here
+                                }
+                            });
+                        });
                     }
                     else { 
 head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Humidity</th><th>Ammonia</th><th>Thermal</th><th>SD Card</th><th>RTC</th><th>Last Seen</th><th>Action</th>'; 
@@ -238,11 +634,11 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                             loadList('devices', '');
                             loadStats();
                         } else {
-                            alert('Error checking devices: ' + (d.message || 'Unknown error'));
+                            showModal('Error', 'Error checking devices: ' + (d.message || 'Unknown error'), 'error');
                         }
                     })
                     .catch(() => {
-                        alert('Error checking devices: Network error');
+                        showModal('Error', 'Error checking devices: Network error', 'error');
                     })
                     .finally(() => {
                         checkAllBtn.textContent = originalText;
@@ -286,11 +682,11 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                         console.log('Farm assignment updated successfully');
                         loadList('users', '');
                     } else {
-                        alert('Error updating farm assignment: ' + (d.message || 'Unknown error'));
+                        showModal('Error', 'Error updating farm assignment: ' + (d.message || 'Unknown error'), 'error');
                     }
                 })
                 .catch(() => {
-                    alert('Error updating farm assignment: Network error');
+                    showModal('Error', 'Error updating farm assignment: Network error', 'error');
                 });
             }
             function checkSingleDevice(deviceId, deviceIp, button) {
@@ -305,16 +701,131 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                             loadList('devices', '');
                             loadStats();
                         } else {
-                            alert('Error checking device: ' + (d.message || 'Unknown error'));
+                            showModal('Error', 'Error checking device: ' + (d.message || 'Unknown error'), 'error');
                         }
                     })
                     .catch(() => {
-                        alert('Error checking device: Network error');
+                        showModal('Error', 'Error checking device: Network error', 'error');
                     })
                     .finally(() => {
                         button.textContent = originalText;
                         button.disabled = false;
                     });
+            }
+            
+            // Device Assignment Functions
+            function showDeviceAssignment() {
+                // Load users and farms for dropdowns
+                loadUsersForAssignment();
+                loadFarmsForAssignment();
+                
+                // Show assignment panel
+                document.getElementById('deviceAssignmentPanel').style.display = 'block';
+                document.getElementById('listPanel').style.display = 'none';
+            }
+            
+            function loadUsersForAssignment() {
+                fetch('../php/admin_lists.php?type=users')
+                    .then(r => r.json())
+                    .then(d => {
+                        const userSelect = document.getElementById('assignUserId');
+                        if (d.success && d.data) {
+                            userSelect.innerHTML = '<option value="">Select User...</option>' + 
+                                d.data.map(user => `<option value="${user.id}">${user.username} (${user.first_name || ''} ${user.last_name || ''})</option>`).join('');
+                        } else {
+                            userSelect.innerHTML = '<option value="">Error loading users</option>';
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('assignUserId').innerHTML = '<option value="">Error loading users</option>';
+                    });
+            }
+            
+            function loadFarmsForAssignment() {
+                fetch('../php/admin_lists.php?type=farms')
+                    .then(r => r.json())
+                    .then(d => {
+                        const farmSelect = document.getElementById('assignFarmId');
+                        if (d.success && d.data) {
+                            farmSelect.innerHTML = '<option value="">Select Farm...</option>' + 
+                                d.data.map(farm => `<option value="${farm.id}">${farm.farm_name}</option>`).join('');
+                        } else {
+                            farmSelect.innerHTML = '<option value="">Error loading farms</option>';
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('assignFarmId').innerHTML = '<option value="">Error loading farms</option>';
+                    });
+            }
+            
+            function submitDeviceAssignment() {
+                const form = document.getElementById('deviceAssignmentForm');
+                const formData = new FormData(form);
+                
+                // Validate required fields
+                const deviceIP = formData.get('device_ip');
+                const deviceName = formData.get('device_name');
+                const deviceType = formData.get('device_type');
+                const deviceCode = formData.get('device_code');
+                const userId = formData.get('user_id');
+                
+                if (!deviceIP || !deviceName || !deviceType || !deviceCode || !userId) {
+                    showModal('Warning', 'Please fill in all required fields.', 'warning');
+                    return;
+                }
+                
+                // Validate IP address format
+                const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+                if (!ipRegex.test(deviceIP)) {
+                    showModal('Warning', 'Please enter a valid IP address.', 'warning');
+                    return;
+                }
+                
+                // Prepare assignment data
+                const assignmentData = {
+                    action: 'assign_device',
+                    device_ip: deviceIP,
+                    device_name: deviceName,
+                    device_type: deviceType,
+                    device_code: deviceCode,
+                    user_id: userId,
+                    mac_address: formData.get('mac_address') || null,
+                    farm_id: formData.get('farm_id') || null,
+                    static_ip: document.getElementById('assignStaticIP').checked
+                };
+                
+                // Submit assignment
+                const submitBtn = document.getElementById('submitAssignment');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Assigning...';
+                submitBtn.disabled = true;
+                
+                fetch('../php/admin_devices.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(assignmentData)
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        showModal('Success', 'Device assigned successfully!', 'success');
+                        document.getElementById('deviceAssignmentPanel').style.display = 'none';
+                        form.reset();
+                        loadList('devices', ''); // Refresh device list
+                        loadStats(); // Refresh statistics
+                    } else {
+                        showModal('Error', 'Error assigning device: ' + (d.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(() => {
+                    showModal('Error', 'Error assigning device: Network error', 'error');
+                })
+                .finally(() => {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
             }
         });
     </script>

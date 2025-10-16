@@ -1020,8 +1020,8 @@ class WeeklyReport {
         `;
     }
     
-    logout(){ 
-        if(!confirm('Are you sure you want to logout?')) return; 
+    async logout(){ 
+        if(!(await showModal('Confirm Logout', 'Are you sure you want to logout?', 'confirm', true))) return; 
         fetch('../php/admin_auth.php',{
             method:'POST',
             headers:{'Content-Type':'application/json'},

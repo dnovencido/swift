@@ -14,7 +14,8 @@ try {
         $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         if ($q !== '') {
             $stmt = $db->prepare("SELECT u.id, u.username, u.role, u.created_at,
-                                          p.first_name, p.last_name, p.mobile, p.email
+                                          p.first_name, p.last_name, p.middle_name, p.mobile, p.email,
+                                          p.addr_street, p.addr_barangay, p.addr_city, p.addr_province, p.addr_postal
                                    FROM users u
                                    LEFT JOIN user_profiles p ON p.user_id = u.id
                                    WHERE u.username LIKE ? AND u.role <> 'super_user' AND u.username <> 'admin'
@@ -22,7 +23,8 @@ try {
             $stmt->execute(['%'.$q.'%']);
         } else {
             $stmt = $db->query("SELECT u.id, u.username, u.role, u.created_at,
-                                        p.first_name, p.last_name, p.mobile, p.email
+                                        p.first_name, p.last_name, p.middle_name, p.mobile, p.email,
+                                        p.addr_street, p.addr_barangay, p.addr_city, p.addr_province, p.addr_postal
                                  FROM users u
                                  LEFT JOIN user_profiles p ON p.user_id = u.id
                                  WHERE u.role <> 'super_user' AND u.username <> 'admin'
@@ -47,13 +49,19 @@ try {
             $p = [
                 'first_name' => trim($in['first_name'] ?? ''),
                 'last_name' => trim($in['last_name'] ?? ''),
+                'middle_name' => trim($in['middle_name'] ?? ''),
                 'mobile' => trim($in['mobile'] ?? ''),
-                'email' => trim($in['email'] ?? '')
+                'email' => trim($in['email'] ?? ''),
+                'addr_street' => trim($in['addr_street'] ?? ''),
+                'addr_barangay' => trim($in['addr_barangay'] ?? ''),
+                'addr_city' => trim($in['addr_city'] ?? ''),
+                'addr_province' => trim($in['addr_province'] ?? ''),
+                'addr_postal' => trim($in['addr_postal'] ?? '')
             ];
             $any = implode('', $p) !== '';
             if ($any) {
-                $ps = $db->prepare('INSERT INTO user_profiles (user_id, first_name, last_name, mobile, email) VALUES (?,?,?,?,?)');
-                $ps->execute([$userId, $p['first_name'],$p['last_name'],$p['mobile'],$p['email']]);
+                $ps = $db->prepare('INSERT INTO user_profiles (user_id, first_name, last_name, middle_name, mobile, email, addr_street, addr_barangay, addr_city, addr_province, addr_postal) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+                $ps->execute([$userId, $p['first_name'],$p['last_name'],$p['middle_name'],$p['mobile'],$p['email'],$p['addr_street'],$p['addr_barangay'],$p['addr_city'],$p['addr_province'],$p['addr_postal']]);
             }
             $db->commit();
             $logger = new ActivityLogger();
@@ -92,17 +100,23 @@ try {
             $p = [
                 'first_name' => trim($in['first_name'] ?? ''),
                 'last_name' => trim($in['last_name'] ?? ''),
+                'middle_name' => trim($in['middle_name'] ?? ''),
                 'mobile' => trim($in['mobile'] ?? ''),
-                'email' => trim($in['email'] ?? '')
+                'email' => trim($in['email'] ?? ''),
+                'addr_street' => trim($in['addr_street'] ?? ''),
+                'addr_barangay' => trim($in['addr_barangay'] ?? ''),
+                'addr_city' => trim($in['addr_city'] ?? ''),
+                'addr_province' => trim($in['addr_province'] ?? ''),
+                'addr_postal' => trim($in['addr_postal'] ?? '')
             ];
             $exists = $db->prepare('SELECT id FROM user_profiles WHERE user_id=?');
             $exists->execute([$id]);
             if ($exists->fetch()) {
-                $ps = $db->prepare('UPDATE user_profiles SET first_name=?, last_name=?, mobile=?, email=? WHERE user_id=?');
-                $ps->execute([$p['first_name'],$p['last_name'],$p['mobile'],$p['email'],$id]);
+                $ps = $db->prepare('UPDATE user_profiles SET first_name=?, last_name=?, middle_name=?, mobile=?, email=?, addr_street=?, addr_barangay=?, addr_city=?, addr_province=?, addr_postal=? WHERE user_id=?');
+                $ps->execute([$p['first_name'],$p['last_name'],$p['middle_name'],$p['mobile'],$p['email'],$p['addr_street'],$p['addr_barangay'],$p['addr_city'],$p['addr_province'],$p['addr_postal'],$id]);
             } else {
-                $ps = $db->prepare('INSERT INTO user_profiles (user_id, first_name, last_name, mobile, email) VALUES (?,?,?,?,?)');
-                $ps->execute([$id,$p['first_name'],$p['last_name'],$p['mobile'],$p['email']]);
+                $ps = $db->prepare('INSERT INTO user_profiles (user_id, first_name, last_name, middle_name, mobile, email, addr_street, addr_barangay, addr_city, addr_province, addr_postal) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+                $ps->execute([$id,$p['first_name'],$p['last_name'],$p['middle_name'],$p['mobile'],$p['email'],$p['addr_street'],$p['addr_barangay'],$p['addr_city'],$p['addr_province'],$p['addr_postal']]);
             }
             $db->commit();
             $logger = new ActivityLogger();
