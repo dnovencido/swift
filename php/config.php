@@ -8,8 +8,8 @@ date_default_timezone_set('Asia/Manila');
 
 return [
     'client' => [
-        'host' => 'localhost:3306',
-        'database' => 'swift',
+        'host' => 'localhost',
+        'database' => 'swift_client',
         'user' => 'swift',
         'password' => 'swift@2025',
         'charset' => 'utf8mb4',
@@ -21,7 +21,7 @@ return [
         ]
     ],
     'admin' => [
-        'host' => 'localhost:3306',
+        'host' => 'localhost',
         'database' => 'swift_admin',
         'user' => 'swift',
         'password' => 'swift@2025'
