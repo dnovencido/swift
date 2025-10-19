@@ -9,9 +9,9 @@ date_default_timezone_set('Asia/Manila');
 return [
     'client' => [
         'host' => 'localhost:3306',
-        'database' => 'swift_client',
-        'user' => 'root',
-        'password' => '',
+        'database' => 'swift',
+        'user' => 'swift',
+        'password' => 'swift@2025',
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -23,8 +23,8 @@ return [
     'admin' => [
         'host' => 'localhost:3306',
         'database' => 'swift_admin',
-        'user' => 'root',
-        'password' => '',
+        'user' => 'swift',
+        'password' => 'swift@2025'
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
