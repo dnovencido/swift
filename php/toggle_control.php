@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 $input = json_decode(file_get_contents('php://input'), true);
 $control = $input['control'] ?? '';
-$arduinoIP = 'http://192.168.1.10';
+$arduinoIP = 'http://192.168.1.100';
 try {
     $endpointMap = [
         'pumpTemp' => '/togglepump',    

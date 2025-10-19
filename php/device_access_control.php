@@ -107,7 +107,9 @@ class DeviceAccessControl {
     public function getDevicesByUserId($userId) {
         $stmt = $this->adminDb->prepare("
             SELECT d.id, d.device_name, d.device_code, d.ip_address, d.device_type, d.status,
-                   d.last_seen, d.farm_id, f.farm_name
+                   d.last_seen, d.farm_id, f.farm_name,
+                   d.temp_humidity_sensor, d.ammonia_sensor, d.thermal_camera, 
+                   d.sd_card_module, d.rtc_module, d.component_last_checked
             FROM devices d
             LEFT JOIN farms f ON f.id = d.farm_id
             WHERE d.user_id = ?

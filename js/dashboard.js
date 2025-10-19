@@ -160,14 +160,7 @@ class Dashboard {
                                 <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">MQ137 Sensor</p>
                                 <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: ${ammonia.color};">${ammonia.text}</h2>
                             </div>
-                        </div>
-                        <div class="transfer-card">
-                            <div class="card-icon" style="background: ${thermal.color}; color: white;"><i class="fas fa-${thermal.icon}"></i></div>
-                            <div>
-                                <p class="card-title" style="margin: 0; font-size: 14px; color: var(--text-secondary);">AMG8833 Sensor</p>
-                                <h2 class="card-amount" style="margin: 4px 0 0 0; font-size: 16px; font-weight: 600; color: ${thermal.color};">${thermal.text}</h2>
-                            </div>
-                        </div>
+                      
                     </div>
                 </div>
             `;

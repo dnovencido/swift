@@ -15,12 +15,12 @@
 // Available for future expansion:
 // #define RELAY_CH4_PIN 5  // Channel 4
 // #define RELAY_CH5_PIN 6  // Channel 5
-// #define RELAY_CH6_PIN 7  // Channel 6
+// #define RELAY_CH6_PIN 7  // Channel 6`
 // #define RELAY_CH7_PIN 8  // Channel 7
 // #define RELAY_CH8_PIN 9  // Channel 8
 #define SD_CS_PIN 10
 #define LCD_SDA_PIN A4
-#define LCD_SCL_PIN A5w+
+#define LCD_SCL_PIN A5
 
 DHT dht(DHT_PIN, DHT22);
 Adafruit_AMG88xx amg;
@@ -32,16 +32,16 @@ bool timeInitialized = false;
 unsigned long timeSyncRetryCount = 0;
 const unsigned long MAX_TIME_SYNC_RETRIES = 10;
 
-const char* ssid = "PLDTHOMEFIBRa7b48";
-const char* password = "PLDTWIFIrpmj3";
+const char* ssid = "TP-Link_10D1";
+const char* password = "95124988";
 
 // Static IP Configuration
-IPAddress staticIP(192, 168, 1, 11);    // Device IP address
+IPAddress staticIP(192, 168, 1, 100);    // Device IP address
 IPAddress gateway(192, 168, 1, 1);      // Router/Gateway IP
 IPAddress subnet(255, 255, 255, 0);     // Subnet mask
 IPAddress dns(8, 8, 8, 8);              // DNS server (Google DNS)
 
-const char* serverHost = "192.168.1.10";
+const char* serverHost = "192.168.1.182";
 const int serverPort = 80;
 const char* serverPath = "/SWIFT/NEW_SWIFT/php/save_realtime_data.php";
 
@@ -738,12 +738,51 @@ void deactivateSchedule() {
   }
 }
 
+void testNetworkConnectivity() {
+  Serial.println("=== NETWORK CONNECTIVITY TEST ===");
+  Serial.println("Testing basic network connectivity...");
+  
+  // Test 1: Ping gateway
+  Serial.println("1. Testing gateway connectivity...");
+  Serial.println("Gateway IP: " + WiFi.gatewayIP().toString());
+  
+  // Test 2: Try to connect to server
+  Serial.println("2. Testing server connectivity...");
+  Serial.println("Server: " + String(serverHost) + ":" + String(serverPort));
+  
+  WiFiClient testClient;
+  if (testClient.connect(serverHost, serverPort)) {
+    Serial.println("✓ Server is reachable!");
+    testClient.stop();
+  } else {
+    Serial.println("✗ Server is not reachable");
+    Serial.println("Possible issues:");
+    Serial.println("- Server IP address is incorrect");
+    Serial.println("- Server is not running");
+    Serial.println("- Firewall blocking connection");
+    Serial.println("- Network routing issue");
+  }
+  
+  // Test 3: Check DNS resolution
+  Serial.println("3. Testing DNS resolution...");
+  IPAddress resolvedIP;
+  if (WiFi.hostByName("google.com", resolvedIP)) {
+    Serial.println("✓ DNS resolution working: " + resolvedIP.toString());
+  } else {
+    Serial.println("✗ DNS resolution failed");
+  }
+  
+  Serial.println("=== END CONNECTIVITY TEST ===");
+}
+
 void processSerialCommands() {
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
     command.trim();
     if (command == "STATUS") {
       displaySerialMonitor();
+    } else if (command == "NETWORK_TEST") {
+      testNetworkConnectivity();
     } else if (command == "RESET") {
       pumpStatus = false;
       heatStatus = false;
@@ -794,7 +833,7 @@ void processSerialCommands() {
       attemptTimeSync();
     } else {
       Serial.println("Unknown command: " + command);
-      Serial.println("Available commands: PUMP_ON, PUMP_OFF, HEAT_ON, HEAT_OFF, STATUS, RESET, WIFI_SCAN, WIFI_STATUS, WIFI_RECONNECT, SET_TIME:YYYY,M,D,H,M,S, SYNC_TIME");
+      Serial.println("Available commands: PUMP_ON, PUMP_OFF, HEAT_ON, HEAT_OFF, STATUS, RESET, WIFI_SCAN, WIFI_STATUS, WIFI_RECONNECT, NETWORK_TEST, SET_TIME:YYYY,M,D,H,M,S, SYNC_TIME");
     }
   }
 }
@@ -952,7 +991,7 @@ void sendDataToWebApp() {
   }
   
   String jsonData = "{";
-  jsonData += "\"device_id\":\"D001\",";  // Device code from database
+  jsonData += "\"device_id\":\"D002\",";  // Device code from database
   jsonData += "\"timestamp\":\"" + sensorData.timestamp + "\",";
   jsonData += "\"temp\":" + String(sensorData.temperature, 1) + ",";
   jsonData += "\"hum\":" + String(sensorData.humidity, 1) + ",";
@@ -978,13 +1017,27 @@ void sendDataToWebApp() {
   
   unsigned long connectTimeout = millis();
   bool connected = false;
+  int connectionAttempts = 0;
   
-  while (millis() - connectTimeout < 3000) {
+  Serial.println("Attempting to connect to server: " + String(serverHost) + ":" + String(serverPort));
+  Serial.println("Device IP: " + WiFi.localIP().toString());
+  Serial.println("Gateway: " + WiFi.gatewayIP().toString());
+  Serial.println("Subnet: " + WiFi.subnetMask().toString());
+  
+  while (millis() - connectTimeout < 5000) {
+    connectionAttempts++;
+    Serial.println("Connection attempt " + String(connectionAttempts) + "...");
+    
     if (wifiClient.connect(serverHost, serverPort)) {
       connected = true;
+      Serial.println("✓ Successfully connected to server!");
       break;
+    } else {
+      Serial.println("✗ Connection attempt " + String(connectionAttempts) + " failed");
+      Serial.println("WiFi status: " + String(WiFi.status()));
+      Serial.println("Client connected: " + String(wifiClient.connected() ? "true" : "false"));
     }
-    delay(100);
+    delay(500);
   }
   
   if (connected) {

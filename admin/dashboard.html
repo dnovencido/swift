@@ -591,7 +591,7 @@
                         });
                     }
                     else { 
-head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Humidity</th><th>Ammonia</th><th>Thermal</th><th>SD Card</th><th>RTC</th><th>Last Seen</th><th>Action</th>'; 
+head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Humidity</th><th>Ammonia</th><th>SD Card</th><th>RTC</th><th>Last Seen</th><th>Action</th>'; 
                         body.innerHTML = rows.map(r=>{
                             const getComponentStatus = (status) => {
                                 if (status === 'active') return '<span style="color: #22c55e; font-weight: 600;">● Active</span>';

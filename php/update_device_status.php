@@ -87,7 +87,7 @@ class DeviceStatusUpdater {
                     'user_agent' => 'SWIFT-DeviceChecker/1.0'
                 ]
             ]);
-            $url = "http://192.168.1.10/checkdevice";//192.168.1.10/checkdevice";
+            $url = "http://192.168.1.100/checkdevice";//192.168.1.100/checkdevice";
             $result = @file_get_contents($url, false, $context);
             if ($result !== false && $result !== '') {
                 $data = json_decode($result, true);
@@ -136,7 +136,7 @@ class DeviceStatusUpdater {
                 'user_agent' => 'SWIFT-DeviceChecker/1.0'
             ]
         ]);
-        $url = "http://192.168.1.10/checkdevice";
+        $url = "http://192.168.1.100/checkdevice";
         $result = @file_get_contents($url, false, $context);
         if ($result !== false && $result !== '') {
             $data = json_decode($result, true);
@@ -196,7 +196,7 @@ class DeviceStatusUpdater {
                     'ignore_errors' => true 
                 ]
             ]);
-            $url = "http://192.168.1.10/checkdevice";//192.168.1.10/checkdevice";
+            $url = "http://192.168.1.100/checkdevice";//192.168.1.100/checkdevice";
             $result = @file_get_contents($url, false, $context);
             if ($result !== false && $result !== '') {
                 $data = json_decode($result, true);
