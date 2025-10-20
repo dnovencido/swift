@@ -21,7 +21,7 @@ if (typeof window.SWIFT_CONFIG !== 'undefined') {
         buildDate: '2024-01-15',
         
         // Network Configuration
-        arduinoIP: 'http://192.168.1.100', // Arduino UNO R4 WiFi IP address
+        arduinoIP: 'https://192.168.1.100', // Arduino UNO R4 WiFi IP address
         apiBaseUrl: '/SWIFT/NEW_SWIFT/php',
         
         // API Endpoints
