@@ -41,7 +41,7 @@ IPAddress gateway(192, 168, 1, 1);      // Router/Gateway IP
 IPAddress subnet(255, 255, 255, 0);     // Subnet mask
 IPAddress dns(8, 8, 8, 8);              // DNS server (Google DNS)
 
-const char* serverHost = "192.168.1.182";
+const char* serverHost = "192.168.1.113";
 const int serverPort = 80;
 const char* serverPath = "/SWIFT/NEW_SWIFT/php/save_realtime_data.php";
 
@@ -166,6 +166,9 @@ void setup() {
 void loop() {
   unsigned long loopStartTime = millis();
   
+  // Always prioritize serving web requests to keep /data responsive
+  handleWebServerRequests();
+  
   if (!systemInitialized) {
     Serial.println("System not initialized. Please check components.");
     delay(5000);
@@ -194,11 +197,16 @@ void loop() {
     Serial.println("DEBUG: NTP update completed");
   }
   
+  // Opportunistically serve web requests between time-consuming tasks
+  handleWebServerRequests();
+  
   if (!timeInitialized && millis() - lastTimeSync >= 10000) {
     Serial.println("Retrying precise time sync...");
     attemptTimeSync();
     lastTimeSync = millis();
   }
+  
+  handleWebServerRequests();
   
   if (millis() - lastComponentCheck >= COMPONENT_CHECK_INTERVAL) {
     Serial.println("DEBUG: Starting component check...");
@@ -206,6 +214,8 @@ void loop() {
     lastComponentCheck = millis();
     Serial.println("DEBUG: Component check completed");
   }
+  
+  handleWebServerRequests();
   
   if (millis() - lastScheduleCheck >= SCHEDULE_CHECK_INTERVAL) {
     Serial.println("DEBUG: Starting schedule check...");
@@ -217,12 +227,16 @@ void loop() {
     Serial.println("DEBUG: Schedule check completed");
   }
   
+  handleWebServerRequests();
+  
   if (millis() - lastStateSync >= STATE_SYNC_INTERVAL) {
     Serial.println("DEBUG: Starting web app state sync...");
     syncWithWebAppState();
     lastStateSync = millis();
     Serial.println("DEBUG: Web app state sync completed");
   }
+  
+  handleWebServerRequests();
   
   if (millis() - lastDataSent >= DATA_SEND_INTERVAL) {
     Serial.println("DEBUG: Starting data collection cycle...");
@@ -232,6 +246,8 @@ void loop() {
     displaySerialMonitor();
     displayLCD();
     logToSDCard();
+    
+    handleWebServerRequests();
     
     unsigned long sendStartTime = millis();
     sendDataToWebApp();
@@ -254,7 +270,8 @@ void loop() {
     Serial.println("WARNING: Main loop took " + String(loopDuration) + "ms - possible issue");
   }
   
-  delay(100);
+  // Keep loop latency low so HTTP stays responsive
+  delay(5);
 }
 
 void initializeComponents() {
@@ -1326,6 +1343,9 @@ void handleWebServerRequests() {
             client.print("}");
             client.println("}");
             
+            client.flush();
+            delay(1);
+            client.stop();
             Serial.println("✓ Live data served to dashboard");
             break;
           } else if (request.indexOf("GET /schedule") != -1) {

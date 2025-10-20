@@ -58,7 +58,7 @@ if (empty($remoteAddr) || $remoteAddr === '127.0.0.1') {
         $remoteAddr = $_SERVER['HTTP_X_REAL_IP'];
     } else {
         // For testing from command line, use Arduino IP
-        $remoteAddr = '192.168.1.11';
+        $remoteAddr = '192.168.1.100';
     }
 }
 

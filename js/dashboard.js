@@ -466,7 +466,7 @@ class Dashboard {
         
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1000); // Reduced timeout
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // Allow up to 3s for device response
             
             const timestamp = Date.now();
             const response = await fetch(`http://${arduinoIP}/data?t=${timestamp}`, {
