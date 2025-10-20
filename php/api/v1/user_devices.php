@@ -1,6 +1,6 @@
 <?php
 // Configure session cookie for proper path
-ini_set('session.cookie_path', '/SWIFT/NEW_SWIFT/');
+ini_set('session.cookie_path', '/swift/');
 session_start();
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
