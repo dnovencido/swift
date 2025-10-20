@@ -24,7 +24,7 @@ return [
         'host' => 'localhost',
         'database' => 'swift_admin',
         'user' => 'swift',
-        'password' => 'swift@2025'
+        'password' => 'swift@2025',
         'charset' => 'utf8mb4',
         'options' => [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
