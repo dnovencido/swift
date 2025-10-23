@@ -282,11 +282,11 @@
         document.addEventListener('DOMContentLoaded', () => {
             try {
                 const u = JSON.parse(localStorage.getItem('swift_user')||'null');
-                if (!u) { window.location.href = '../login.html'; return; }
-                if ((u.role||'').toLowerCase() !== 'super_user') { window.location.href = '../user/index.html'; return; }
-            } catch(e){ window.location.href='../login.html'; return; }
+                if (!u) { window.location.href = '../index.html'; return; }
+                if ((u.role||'').toLowerCase() !== 'super_user') { window.location.href = '../user/dashboard.html'; return; }
+            } catch(e){ window.location.href='../index.html'; return; }
             const hour=new Date().getHours(); const s=hour<12?'Good Morning':(hour<17?'Good Afternoon':'Good Evening'); let n='Admin'; try{const st=localStorage.getItem('swift_user'); if(st){const p=JSON.parse(st); n=p.username||n;}}catch(e){}; document.getElementById('greeting').textContent=`${s}, ${n}!`;
-            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='../login.html'; });});
+            document.getElementById('logoutBtn').addEventListener('click', (e)=>{ e.preventDefault(); fetch('../php/admin_auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).finally(()=>{ try{localStorage.removeItem('swift_user');}catch(e){} window.location.href='../index.html'; });});
             
             // Modal System Functions
             function showModal(title, message, type = 'info', showCancel = false) {
@@ -405,7 +405,8 @@
                 loadStats();
             }, 100);
         setInterval(loadStats, 5000);
-        setInterval(updateDeviceStatus, 5000);
+        // Removed automatic device status updates - status is now managed by data reception
+        // setInterval(updateDeviceStatus, 5000);
             function loadStats() {
                 fetch('../php/admin_stats.php').then(r=>r.json()).then(d=>{ 
                     if(!d||!d.success) return; 
@@ -427,7 +428,7 @@
                 });
             }
             function updateDeviceStatus() {
-                fetch('../php/update_device_status.php?run=update&manual=true').then(r=>r.json()).then(d=>{
+                fetch('../php/update_device_status.php?run=update').then(r=>r.json()).then(d=>{
                     if(d.success) {
                         loadStats();
                     }
@@ -627,7 +628,7 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                 const originalText = checkAllBtn.textContent;
                 checkAllBtn.textContent = 'Checking...';
                 checkAllBtn.disabled = true;
-                fetch('../php/update_device_status.php?run=update&manual=true')
+                fetch('../php/update_device_status.php?run=update&manual=true&admin_action=true')
                     .then(r => r.json())
                     .then(d => {
                         if (d.success) {
@@ -693,7 +694,7 @@ head.innerHTML='<th>ID</th><th>Device</th><th>IP</th><th>Status</th><th>Temp/Hum
                 const originalText = button.textContent;
                 button.textContent = 'Checking...';
                 button.disabled = true;
-                const url = `../php/update_device_status.php?run=update&device_id=${deviceId}`;
+                const url = `../php/update_device_status.php?run=update&device_id=${deviceId}&admin_action=true`;
                 fetch(url)
                     .then(r => r.json())
                     .then(d => {

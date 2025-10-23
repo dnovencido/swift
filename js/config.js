@@ -1,215 +1,307 @@
 /**
- * SWIFT IoT Smart Swine Farming System - Configuration
- * Version: 2.1.0 (Production Ready)
+ * SWIFT IoT System - Configuration File
  * 
- * Runtime configuration for the SWIFT web application
- * Contains all system settings, API endpoints, and feature flags
+ * This configuration file contains all the system settings and constants
+ * for the SWIFT IoT Smart Swine Farming System.
  * 
+ * @version 2.0
  * @author SWIFT Development Team
- * @version 2.1.0
- * @since 2024-01-15
+ * @since 2024
  */
 
-// Prevent multiple definitions
-if (typeof window.SWIFT_CONFIG !== 'undefined') {
-    console.warn('SWIFT_CONFIG already defined. Skipping redefinition.');
-} else {
-    window.SWIFT_CONFIG = {
-        // System Information
-        version: '2.1.0',
-        name: 'SWIFT IoT Smart Swine Farming System',
-        buildDate: '2024-01-15',
-        
-        // Network Configuration
-        arduinoIP: 'https://192.168.1.100', // Arduino UNO R4 WiFi IP address
-        apiBaseUrl: '/SWIFT/NEW_SWIFT/php',
-        
-        // API Endpoints
-        endpoints: {
-            // Data endpoints
-            saveRealtimeData: '/save_realtime_data.php',
-            getLatestSensorData: '/get_latest_sensor_data.php',
-            getHistoricalData: '/get_historical_data.php',
-            getReportData: '/get_report_data.php',
-            
-            // Control endpoints
-            toggleControl: '/toggle_control.php',
-            updateDeviceStatus: '/update_device_status.php',
-            
-            // Admin endpoints
-            adminAuth: '/admin_auth.php',
-            adminLists: '/admin_lists.php',
-            adminStats: '/admin_stats.php',
-            adminUsers: '/admin_users.php',
-            adminFarms: '/admin_farms.php',
-            getActivityLog: '/get_activity_log.php',
-            
-            // API v1 endpoints
-            apiV1: {
-                auth: '/api/v1/auth.php',
-                sensors: '/api/v1/sensors.php',
-                controls: '/api/v1/controls.php',
-                reports: '/api/v1/reports.php',
-                weeklyReports: '/api/v1/weekly_reports.php'
-            }
+// System Configuration
+const SWIFT_CONFIG = {
+    // API Endpoints
+    API: {
+        BASE_URL: '../php/api/v1/',
+        SENSOR_DATA: 'sensor_data.php',
+        DEVICE_CONTROL: 'device_control.php',
+        AUTH: 'auth.php',
+        SCHEDULES: 'schedules.php'
+    },
+    
+    // Arduino Device Configuration
+    DEVICE: {
+        DEFAULT_ID: 1,
+        UPDATE_INTERVAL: 2000, // 2 seconds
+        TIMEOUT: 300000, // 5 minutes
+        MAX_RETRIES: 3
+    },
+    
+    // Environmental Thresholds (Philippines-specific for swine farming)
+    THRESHOLDS: {
+        TEMPERATURE: {
+            HIGH: 30.0, // Celsius - Trigger water sprinkler
+            LOW: 15.0,  // Celsius - Trigger heat bulb
+            OPTIMAL_MIN: 18.0,
+            OPTIMAL_MAX: 24.0
         },
-        
-        // Timing Configuration
-        timing: {
-            dataRefreshInterval: 1000,        // 1 second
-            deviceStatusInterval: 5000,       // 5 seconds
-            chartUpdateInterval: 2000,        // 2 seconds
-            connectionTimeout: 10000,         // 10 seconds
-            retryDelay: 2000,                 // 2 seconds
-            maxRetries: 3
+        HUMIDITY: {
+            HIGH: 80.0, // Percentage
+            LOW: 50.0,  // Percentage
+            OPTIMAL_MIN: 60.0,
+            OPTIMAL_MAX: 70.0
         },
-        
-        // Feature Flags
-        features: {
-            realTimeCharts: true,
-            deviceControl: true,
-            reportGeneration: true,
-            dataExport: true,
-            activityLogging: true,
-            responsiveDesign: true,
-            offlineMode: false,
-            pushNotifications: false,
-            darkMode: false
-        },
-        
-        // Chart Configuration
-        charts: {
-            defaultColors: {
-                temperature: '#ff6b6b',
-                humidity: '#4ecdc4',
-                ammonia: '#45b7d1',
-                pump: '#96ceb4',
-                heat: '#feca57'
-            },
-            animationDuration: 750,
-            responsive: true,
-            maintainAspectRatio: false
-        },
-        
-        // Alert Thresholds
-        thresholds: {
-            temperature: {
-                low: 18.0,
-                high: 25.0,
-                critical: 30.0
-            },
-            humidity: {
-                high: 70.0,
-                critical: 85.0
-            },
-            ammonia: {
-                high: 3.5,
-                critical: 5.0
-            }
-        },
-        
-        // UI Configuration
-        ui: {
-            theme: 'light',
-            language: 'en',
-            dateFormat: 'YYYY-MM-DD',
-            timeFormat: 'HH:mm:ss',
-            numberFormat: {
-                decimals: 2,
-                thousandsSeparator: ',',
-                decimalSeparator: '.'
-            }
-        },
-        
-        // Security Configuration
-        security: {
-            enableCSRF: true,
-            sessionTimeout: 3600000, // 1 hour in milliseconds
-            maxLoginAttempts: 5,
-            passwordMinLength: 8
-        },
-        
-        // Performance Configuration
-        performance: {
-            enableCaching: true,
-            cacheVersion: '6',
-            lazyLoadImages: true,
-            debounceDelay: 300,
-            throttleDelay: 100
-        },
-        
-        // Debug Configuration
-        debug: {
-            enabled: false,
-            logLevel: 'info', // debug, info, warn, error
-            showTimestamps: true,
-            enableConsoleLogging: false
-        },
-        
-        // Utility Methods
-        utils: {
-            /**
-             * Get full API URL for an endpoint
-             * @param {string} endpoint - The endpoint path
-             * @returns {string} Full URL
-             */
-            getApiUrl: function(endpoint) {
-                return this.apiBaseUrl + endpoint;
-            },
-            
-            /**
-             * Get Arduino control URL
-             * @param {string} control - Control type (pump, heat, etc.)
-             * @returns {string} Full Arduino URL
-             */
-            getArduinoUrl: function(control) {
-                return `${this.arduinoIP}/toggle${control}`;
-            },
-            
-            /**
-             * Check if feature is enabled
-             * @param {string} feature - Feature name
-             * @returns {boolean} True if enabled
-             */
-            isFeatureEnabled: function(feature) {
-                return this.features[feature] === true;
-            },
-            
-            /**
-             * Get threshold value
-             * @param {string} sensor - Sensor type
-             * @param {string} level - Threshold level (low, high, critical)
-             * @returns {number} Threshold value
-             */
-            getThreshold: function(sensor, level) {
-                return this.thresholds[sensor]?.[level] || 0;
-            },
-            
-            /**
-             * Format number according to UI settings
-             * @param {number} value - Number to format
-             * @returns {string} Formatted number
-             */
-            formatNumber: function(value) {
-                const config = this.ui.numberFormat;
-                return Number(value).toFixed(config.decimals)
-                    .replace(/\B(?=(\d{3})+(?!\d))/g, config.thousandsSeparator);
-            }
+        AMMONIA: {
+            HIGH: 50.0, // ppm - Trigger water sprinkler
+            SAFE: 25.0, // ppm - Safe level
+            OPTIMAL_MAX: 20.0
         }
-    };
+    },
     
-    // Freeze configuration to prevent modifications
-    Object.freeze(window.SWIFT_CONFIG);
-    Object.freeze(window.SWIFT_CONFIG.endpoints);
-    Object.freeze(window.SWIFT_CONFIG.features);
-    Object.freeze(window.SWIFT_CONFIG.thresholds);
-    Object.freeze(window.SWIFT_CONFIG.utils);
+    // Chart Configuration
+    CHARTS: {
+        UPDATE_INTERVAL: 2000, // 2 seconds
+        MAX_DATA_POINTS: {
+            MINUTE: 30,
+            HOUR: 60,
+            DAY: 144
+        },
+        COLORS: {
+            TEMPERATURE: '#ff6b6b',
+            HUMIDITY: '#4ecdc4',
+            AMMONIA: '#45b7d1',
+            SUCCESS: '#28a745',
+            WARNING: '#ffc107',
+            DANGER: '#dc3545',
+            INFO: '#17a2b8'
+        }
+    },
     
-    // Log configuration loaded
-    if (window.SWIFT_CONFIG.debug.enabled) {
-        console.log('SWIFT Configuration loaded:', window.SWIFT_CONFIG);
+    // UI Configuration
+    UI: {
+        NOTIFICATION_DURATION: 3000, // 3 seconds
+        ANIMATION_DURATION: 300, // 300ms
+        REFRESH_INTERVAL: 5000, // 5 seconds
+        MODAL_TIMEOUT: 10000 // 10 seconds
+    },
+    
+    // Security Configuration
+    SECURITY: {
+        SESSION_TIMEOUT: 3600000, // 1 hour
+        MAX_LOGIN_ATTEMPTS: 5,
+        PASSWORD_MIN_LENGTH: 8,
+        TOKEN_EXPIRY: 86400 // 24 hours
+    },
+    
+    // Database Configuration
+    DATABASE: {
+        RETENTION_DAYS: 30,
+        BACKUP_INTERVAL: 86400, // 24 hours
+        MAX_CONNECTIONS: 10
+    },
+    
+    // Alert Configuration
+    ALERTS: {
+        CHECK_INTERVAL: 60000, // 1 minute
+        ESCALATION_TIME: 300000, // 5 minutes
+        MAX_ALERTS_PER_HOUR: 10
     }
+};
+
+// Device Status Constants
+const DEVICE_STATUS = {
+    ONLINE: 'up',
+    OFFLINE: 'down',
+    ERROR: 'error',
+    MAINTENANCE: 'maintenance'
+};
+
+// Component Status Constants
+const COMPONENT_STATUS = {
+    ACTIVE: 'active',
+    ERROR: 'error',
+    OFFLINE: 'offline'
+};
+
+// Alert Types
+const ALERT_TYPES = {
+    TEMPERATURE_HIGH: 'temperature_high',
+    TEMPERATURE_LOW: 'temperature_low',
+    AMMONIA_HIGH: 'ammonia_high',
+    DEVICE_OFFLINE: 'device_offline',
+    SENSOR_ERROR: 'sensor_error',
+    HUMIDITY_HIGH: 'humidity_high',
+    HUMIDITY_LOW: 'humidity_low'
+};
+
+// Device Control Actions
+const DEVICE_ACTIONS = {
+    TOGGLE_WATER_PUMP: 'toggle_water_pump',
+    TOGGLE_HEAT_BULB: 'toggle_heat_bulb',
+    EMERGENCY_STOP: 'emergency_stop',
+    RESET_DEVICE: 'reset_device',
+    UPDATE_SETTINGS: 'update_settings'
+};
+
+// Schedule Types
+const SCHEDULE_TYPES = {
+    ONCE: 'once',
+    DAILY: 'daily',
+    WEEKDAYS: 'weekdays',
+    WEEKENDS: 'weekends',
+    CUSTOM: 'custom'
+};
+
+// User Roles
+const USER_ROLES = {
+    SUPER_USER: 'super_user',
+    ADMIN: 'admin',
+    USER: 'user',
+    VIEWER: 'viewer'
+};
+
+// API Response Status
+const API_STATUS = {
+    SUCCESS: 'success',
+    ERROR: 'error',
+    WARNING: 'warning',
+    INFO: 'info'
+};
+
+// Utility Functions
+const SWIFT_UTILS = {
+    /**
+     * Format temperature value with unit
+     */
+    formatTemperature: function(value) {
+        return `${parseFloat(value).toFixed(1)}°C`;
+    },
+    
+    /**
+     * Format humidity value with unit
+     */
+    formatHumidity: function(value) {
+        return `${parseFloat(value).toFixed(1)}%`;
+    },
+    
+    /**
+     * Format ammonia value with unit
+     */
+    formatAmmonia: function(value) {
+        return `${parseFloat(value).toFixed(1)} ppm`;
+    },
+    
+    /**
+     * Get color based on temperature value
+     */
+    getTemperatureColor: function(temp) {
+        if (temp >= SWIFT_CONFIG.THRESHOLDS.TEMPERATURE.HIGH) {
+            return SWIFT_CONFIG.CHARTS.COLORS.DANGER;
+        }
+        if (temp <= SWIFT_CONFIG.THRESHOLDS.TEMPERATURE.LOW) {
+            return SWIFT_CONFIG.CHARTS.COLORS.INFO;
+        }
+        return SWIFT_CONFIG.CHARTS.COLORS.SUCCESS;
+    },
+    
+    /**
+     * Get color based on humidity value
+     */
+    getHumidityColor: function(humidity) {
+        if (humidity >= SWIFT_CONFIG.THRESHOLDS.HUMIDITY.HIGH || 
+            humidity <= SWIFT_CONFIG.THRESHOLDS.HUMIDITY.LOW) {
+            return SWIFT_CONFIG.CHARTS.COLORS.WARNING;
+        }
+        return SWIFT_CONFIG.CHARTS.COLORS.SUCCESS;
+    },
+    
+    /**
+     * Get color based on ammonia value
+     */
+    getAmmoniaColor: function(ammonia) {
+        if (ammonia >= SWIFT_CONFIG.THRESHOLDS.AMMONIA.HIGH) {
+            return SWIFT_CONFIG.CHARTS.COLORS.DANGER;
+        }
+        return SWIFT_CONFIG.CHARTS.COLORS.SUCCESS;
+    },
+    
+    /**
+     * Format timestamp for display
+     */
+    formatTimestamp: function(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    },
+    
+    /**
+     * Get time ago string
+     */
+    getTimeAgo: function(timestamp) {
+        const now = new Date();
+        const past = new Date(timestamp);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    },
+    
+    /**
+     * Validate email format
+     */
+    isValidEmail: function(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    },
+    
+    /**
+     * Validate IP address format
+     */
+    isValidIP: function(ip) {
+        const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        return ipRegex.test(ip);
+    },
+    
+    /**
+     * Debounce function for API calls
+     */
+    debounce: function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+    
+    /**
+     * Throttle function for frequent updates
+     */
+    throttle: function(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+};
+
+// Export configuration for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        SWIFT_CONFIG,
+        DEVICE_STATUS,
+        COMPONENT_STATUS,
+        ALERT_TYPES,
+        DEVICE_ACTIONS,
+        SCHEDULE_TYPES,
+        USER_ROLES,
+        API_STATUS,
+        SWIFT_UTILS
+    };
 }
 
-
-
+console.log('SWIFT IoT Configuration loaded successfully');
